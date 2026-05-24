@@ -7,3 +7,4 @@ python-dotenv==1.0.1
 pydantic[email]==2.8.0
 python-multipart==0.0.12
 alembic==1.13.3
+a2wsgi==1.10.7
