@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Accent RGB — zmienia się per motyw, obsługuje opacity modifiers ─── */
+:root { --accent-rgb: 0 0 0; }       /* czarny w jasnym */
+.dark  { --accent-rgb: 255 255 255; } /* biały w ciemnym */
+
+/* ── Paleta jasna (Figma editorial) ──────────────────────────────────── */
+:root {
+  --bg:          #f7f7f5;   /* surface-soft */
+  --bg-surface:  #ffffff;   /* canvas */
+  --bg-card:     #ffffff;
+  --border:      #e6e6e6;   /* hairline */
+  --border-soft: #f1f1f1;   /* hairline-soft */
+  --text:        #000000;   /* ink */
+  --text-dim:    #555555;
+  --text-muted:  #999999;
+}
+
+/* ── Paleta ciemna (navy) ─────────────────────────────────────────────── */
+.dark {
+  --bg:          #0f0e1a;
+  --bg-surface:  #1a1929;
+  --bg-card:     #1a1929;
+  --border:      #2e2c4a;
+  --border-soft: #252338;
+  --text:        #ffffff;
+  --text-dim:    #a0a0c0;
+  --text-muted:  #60608a;
+}
+
+/* ── Baza ─────────────────────────────────────────────────────────────── */
+@layer base {
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-feature-settings: "kern";
+    @apply antialiased;
+  }
+}
+
+/* ── Komponenty ───────────────────────────────────────────────────────── */
+@layer components {
+
+  /* Karta — biała, hairline border, 24px radius (rounded.lg z DESIGN.md) */
+  .glass-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    @apply rounded-3xl;
+  }
+
+  /* Przycisk główny — czarny pill (button-primary z DESIGN.md) */
+  .btn-accent {
+    background-color: var(--text);
+    color: var(--bg-surface);
+    @apply rounded-full px-5 py-2.5 font-medium text-sm
+           transition-opacity duration-150 inline-flex items-center;
+  }
+  .btn-accent:hover:not(:disabled) { opacity: 0.82; }
+  .btn-accent:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  /* Przycisk pomocniczy — outline pill (button-secondary z DESIGN.md) */
+  .btn-ghost {
+    background-color: var(--bg-surface);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    @apply rounded-full px-5 py-2.5 text-sm transition-colors duration-150 inline-flex items-center;
+  }
+  .btn-ghost:hover {
+    color: var(--text);
+    background-color: var(--bg);
+  }
+
+  /* Pole input — białe, hairline border, 8px radius (rounded.md z DESIGN.md) */
+  .input-field {
+    background-color: var(--bg-surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    @apply rounded-lg px-3.5 py-2.5 text-sm
+           focus:outline-none focus:ring-2
+           focus:ring-black/15 dark:focus:ring-white/15
+           transition-colors w-full;
+  }
+  .input-field::placeholder { color: var(--text-muted); }
+
+  /* Etykieta — figmaMono eyebrow (JetBrains Mono, uppercase, positive tracking) */
+  .label {
+    font-family: "JetBrains Mono", Menlo, monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    @apply block mb-1.5;
+  }
+}
+
+/* ── Wydruk ───────────────────────────────────────────────────────────────── */
+.print-portal { display: none; }
+
+@media print {
+  #root { display: none !important; }
+  .print-portal {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    padding: 10mm;
+    background: #fff;
+    color: #000;
+  }
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}
