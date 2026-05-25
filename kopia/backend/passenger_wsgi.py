@@ -1,7 +1,7 @@
 import sys
 import os
 
-APP_ROOT = "/usr/home/pluszek.2026/domains/ramiarz.ebra.pl"
+APP_ROOT = "/usr/home/pluszek2026/domains/ramiarz.ebra.pl"
 VENV_PYTHON = os.path.join(APP_ROOT, ".venv", "bin", "python3")
 
 # Phusion Passenger: switch to venv interpreter if needed

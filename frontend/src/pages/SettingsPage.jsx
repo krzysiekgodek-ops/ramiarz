@@ -39,6 +39,31 @@ const MATERIAL_CATALOG = {
   },
 };
 
+// --- Konwersja marży handlowej (procent) <-> mnożnik narzutu ---
+// W bazie marża jest trzymana jako mnożnik (np. 2.0). W interfejsie
+// wpisujemy ją jako marżę handlową w %, gdzie:
+//   cena_netto_klienta = koszt_netto / (1 - B),  B = marża/100
+// co odpowiada mnożnikowi  m = 1 / (1 - B).
+// Przykłady: 50% -> 2.0,  37.5% -> 1.6,  45% -> ~1.818.
+const MAX_MARGIN_PCT = 99; // limit bezpieczeństwa (B<100% by uniknąć dzielenia przez 0)
+
+function pctToMult(pct) {
+  let b = parseFloat(pct);
+  if (!Number.isFinite(b) || b < 0) b = 0;
+  if (b > MAX_MARGIN_PCT) b = MAX_MARGIN_PCT;
+  return 1 / (1 - b / 100);
+}
+
+function multToPct(mult) {
+  const m = parseFloat(mult);
+  if (!Number.isFinite(m) || m <= 0) return "0";
+  let pct = (1 - 1 / m) * 100;
+  if (pct < 0) pct = 0;
+  if (pct > MAX_MARGIN_PCT) pct = MAX_MARGIN_PCT;
+  // czytelny zapis bez zbędnych zer (37.5, 50, 45)
+  return String(parseFloat(pct.toFixed(2)));
+}
+
 function Field({ label, value, onChange, type = "text", placeholder = "" }) {
   return (
     <div>
@@ -77,16 +102,17 @@ function MaterialRow({ name, unit, showMargin, draft, onChange, onSave, saving, 
           <div className="relative">
             <input
               type="number"
-              min="1"
-              step="0.05"
+              min="0"
+              max="99"
+              step="1"
               value={draft.margin}
               onChange={(e) => onChange("margin", e.target.value)}
               className="input-field w-20 pr-6 text-right"
-              placeholder="1.0"
-              title="Marża (np. 1.5 = +50%)"
+              placeholder="0"
+              title="Marża handlowa, np. 50% → cena klienta = koszt / (1 − 0,50)"
             />
             <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: "var(--text-muted)" }}>
-              ×
+              %
             </span>
           </div>
         )}
@@ -168,8 +194,8 @@ export default function SettingsPage() {
           if (s.config) {
             drafts[s.supplier_id] = {
               discount_pct: (s.config.discount * 100).toFixed(1),
-              m_strip:      s.config.m_strip,
-              m_framed:     s.config.m_framed,
+              m_strip:      multToPct(s.config.m_strip),
+              m_framed:     multToPct(s.config.m_framed),
             };
           }
         });
@@ -185,7 +211,7 @@ export default function SettingsPage() {
         const drafts = {};
         (Array.isArray(data) ? data : []).forEach((m) => {
           const key = `${m.category}::${m.name}`;
-          drafts[key] = { price: m.price, margin: m.margin };
+          drafts[key] = { price: m.price, margin: multToPct(m.margin) };
         });
         setMatDrafts(drafts);
       })
@@ -230,7 +256,11 @@ export default function SettingsPage() {
         );
         setConfigDrafts((prev) => ({
           ...prev,
-          [s.supplier_id]: { discount_pct: "0.0", m_strip: 1.6, m_framed: 2.0 },
+          [s.supplier_id]: {
+            discount_pct: "0.0",
+            m_strip:  multToPct(body.m_strip),
+            m_framed: multToPct(body.m_framed),
+          },
         }));
       }
     } catch (e) {
@@ -253,8 +283,8 @@ export default function SettingsPage() {
     try {
       const body = {
         discount: parseFloat(draft.discount_pct) / 100,
-        m_strip:  parseFloat(draft.m_strip),
-        m_framed: parseFloat(draft.m_framed),
+        m_strip:  pctToMult(draft.m_strip),
+        m_framed: pctToMult(draft.m_framed),
       };
       await api.put(`/auth/supplier-configs/${supplierId}`, body);
       setSupplierConfigs((prev) =>
@@ -271,13 +301,13 @@ export default function SettingsPage() {
     const key = `${category}::${name}`;
     setMatDrafts((prev) => ({
       ...prev,
-      [key]: { price: 0, margin: 1.0, ...prev[key], [field]: value },
+      [key]: { price: 0, margin: "0", ...prev[key], [field]: value },
     }));
   };
 
   const saveMat = async (category, name) => {
     const key = `${category}::${name}`;
-    const draft = matDrafts[key] ?? { price: 0, margin: 1.0 };
+    const draft = matDrafts[key] ?? { price: 0, margin: "0" };
     setSavingMat(key);
     setError(null);
     try {
@@ -285,7 +315,7 @@ export default function SettingsPage() {
         name,
         category,
         price:  parseFloat(draft.price) || 0,
-        margin: parseFloat(draft.margin) || 1.0,
+        margin: pctToMult(draft.margin),
       });
       setSavedMat(key);
       setTimeout(() => setSavedMat((prev) => (prev === key ? null : prev)), 2000);
@@ -397,7 +427,8 @@ export default function SettingsPage() {
           </h2>
         </div>
         <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
-          Aktywuj dostawców, z którymi współpracujesz, i ustaw swój indywidualny rabat oraz marże.
+          Aktywuj dostawców, z którymi współpracujesz, i ustaw swój indywidualny rabat oraz marże handlowe (w %).
+          Cena klienta = koszt / (1 − marża) — przy 50% zysk równa się kosztowi surowca. VAT doliczany jest na końcu.
         </p>
 
         {configsLoading ? (
@@ -447,24 +478,32 @@ export default function SettingsPage() {
                           />
                         </div>
                         <div>
-                          <label className="label">Marża listwa</label>
-                          <input
-                            type="number"
-                            min="1" step="0.05"
-                            value={draft.m_strip}
-                            onChange={(e) => updateDraft(s.supplier_id, "m_strip", e.target.value)}
-                            className="input-field"
-                          />
+                          <label className="label">Marża listwa (%)</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="0" max={MAX_MARGIN_PCT} step="1"
+                              value={draft.m_strip}
+                              onChange={(e) => updateDraft(s.supplier_id, "m_strip", e.target.value)}
+                              className="input-field pr-7"
+                              title="Marża handlowa, np. 50% → cena klienta = koszt / (1 − 0,50)"
+                            />
+                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: "var(--text-muted)" }}>%</span>
+                          </div>
                         </div>
                         <div>
-                          <label className="label">Marża rama</label>
-                          <input
-                            type="number"
-                            min="1" step="0.05"
-                            value={draft.m_framed}
-                            onChange={(e) => updateDraft(s.supplier_id, "m_framed", e.target.value)}
-                            className="input-field"
-                          />
+                          <label className="label">Marża rama (%)</label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              min="0" max={MAX_MARGIN_PCT} step="1"
+                              value={draft.m_framed}
+                              onChange={(e) => updateDraft(s.supplier_id, "m_framed", e.target.value)}
+                              className="input-field pr-7"
+                              title="Marża handlowa, np. 50% → cena klienta = koszt / (1 − 0,50)"
+                            />
+                            <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none" style={{ color: "var(--text-muted)" }}>%</span>
+                          </div>
                         </div>
                       </div>
                       <button
@@ -500,12 +539,12 @@ export default function SettingsPage() {
             <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
               {isFramePrice
                 ? "Stałe ceny oprawy (brutto). Wyświetlane jako przyciski w kalkulatorze — niewidoczne gdy cena = 0."
-                : `Cena netto za m². Marża × cena = cena klienta (brutto = ×VAT). Niewidoczne w kalkulatorze gdy cena = 0.`}
+                : `Cena netto za m². Marża handlowa w %: cena klienta = koszt / (1 − marża), np. 50% = cena dwukrotnie wyższa od kosztu (na końcu doliczany VAT). Niewidoczne w kalkulatorze gdy cena = 0.`}
             </p>
             <div className="flex flex-col">
               {items.map((name) => {
                 const key = `${category}::${name}`;
-                const draft = matDrafts[key] ?? { price: 0, margin: 1.0 };
+                const draft = matDrafts[key] ?? { price: 0, margin: "0" };
                 return (
                   <MaterialRow
                     key={name}

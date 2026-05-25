@@ -1,0 +1,24 @@
+from sqlalchemy import text, inspect
+from app.database import engine
+
+
+def run_migrations():
+    """Idempotentne migracje SQL — działa na SQLite i PostgreSQL."""
+    inspector = inspect(engine)
+
+    if inspector.has_table("orders"):
+        cols = {col["name"] for col in inspector.get_columns("orders")}
+        with engine.connect() as conn:
+            if "phone" not in cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN phone TEXT"))
+                conn.commit()
+            if "pickup_date" not in cols:
+                conn.execute(text("ALTER TABLE orders ADD COLUMN pickup_date TEXT"))
+                conn.commit()
+
+    if inspector.has_table("additional_materials"):
+        with engine.connect() as conn:
+            conn.execute(text(
+                "UPDATE additional_materials SET category = 'front' WHERE category = 'glass'"
+            ))
+            conn.commit()

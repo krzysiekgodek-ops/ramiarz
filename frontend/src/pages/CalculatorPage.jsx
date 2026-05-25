@@ -2,7 +2,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import {
   Calculator, RefreshCw, AlertCircle, ChevronDown, Layers, Square,
-  Building2, Save, Printer, MessageSquare, X, Package, Check,
+  Building2, Save, Printer, MessageSquare, X, Package, Check, TrendingUp,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
@@ -93,6 +93,63 @@ function ResultRow({ label, purchase, client, highlight = false }) {
           style={!highlight ? { color: "var(--text)" } : {}}>
           {client.toFixed(2)} zł
         </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Podgląd osiąganej marży ─────────────────────────────────────────────────
+// Marża handlowa = (cena_klienta − koszt_zakupu) / cena_klienta.
+// Wartość niezależna od VAT (skraca się), więc liczymy wprost na kwotach brutto.
+// Dla pojedynczej listwy z marżą 50% wychodzi 50%, a zysk = koszt surowca.
+function MarginSummary({ result }) {
+  const cost   = result.total_cost_brutto ?? 0; // koszt zakupu (brutto)
+  const price  = result.total ?? 0;             // cena klienta po rabacie (brutto)
+  const profit = price - cost;
+  const marginPct = price > 0 ? (profit / price) * 100 : 0; // marża handlowa
+  const markupPct = cost  > 0 ? (profit / cost)  * 100 : null; // narzut
+
+  const tone =
+    marginPct >= 50 ? "emerald" :
+    marginPct >= 30 ? "amber" : "red";
+  const toneText = {
+    emerald: "text-emerald-600 dark:text-emerald-400",
+    amber:   "text-amber-600 dark:text-amber-400",
+    red:     "text-red-600 dark:text-red-400",
+  }[tone];
+  const toneBg = {
+    emerald: "bg-emerald-500/10 border-emerald-500/20",
+    amber:   "bg-amber-500/10 border-amber-500/20",
+    red:     "bg-red-500/10 border-red-500/20",
+  }[tone];
+
+  return (
+    <div
+      className={`mt-3 rounded-xl border px-3.5 py-3 ${toneBg}`}
+      title="Marża handlowa = (cena klienta − koszt zakupu) / cena klienta"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <TrendingUp size={14} className={toneText} />
+          <span className="text-xs uppercase tracking-wide" style={{ color: "var(--text-dim)" }}>
+            Marża handlowa
+          </span>
+        </div>
+        <span className={`text-lg font-bold font-mono ${toneText}`}>
+          {marginPct.toFixed(1)}%
+        </span>
+      </div>
+      <div className="mt-1.5 flex items-center justify-between text-xs" style={{ color: "var(--text-muted)" }}>
+        <span>
+          Zysk:{" "}
+          <span className="font-mono" style={{ color: "var(--text-dim)" }}>{profit.toFixed(2)} zł</span>
+        </span>
+        {markupPct !== null && (
+          <span>
+            Narzut:{" "}
+            <span className="font-mono" style={{ color: "var(--text-dim)" }}>{markupPct.toFixed(0)}%</span>
+          </span>
+        )}
       </div>
     </div>
   );
@@ -757,6 +814,9 @@ export default function CalculatorPage() {
                     </span>
                   </div>
                 </div>
+
+                {/* Podgląd osiąganej marży */}
+                <MarginSummary result={result} />
 
                 {/* Przyciski */}
                 <div className="mt-4 flex flex-col gap-2">
