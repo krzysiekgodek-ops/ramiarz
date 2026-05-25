@@ -29,3 +29,8 @@ frontend/.env.local
 .idea/
 .vscode/settings.json
 .venv/
+
+
+# uruchomienie aplikacji
+start_backend.bat
+start_frontend.bat

@@ -1,4 +1,4 @@
-const CACHE = "ramiarz-v1";
+const CACHE = "ramiarz-v2";
 const PRECACHE = ["/", "/index.html"];
 
 self.addEventListener("install", (e) => {
@@ -17,9 +17,17 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
-  // API calls — always network, no cache
   if (url.pathname.startsWith("/api/")) return;
-  // Everything else — cache first, network fallback
+
+  // SPA navigation — zawsze serwuj index.html (client-side routing)
+  if (e.request.mode === "navigate") {
+    e.respondWith(
+      caches.match("/index.html").then((cached) => cached || fetch("/index.html"))
+    );
+    return;
+  }
+
+  // Assety — cache first, network fallback
   e.respondWith(
     caches.match(e.request).then((cached) => cached || fetch(e.request))
   );
