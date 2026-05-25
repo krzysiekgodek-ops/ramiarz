@@ -61,7 +61,7 @@ export default function BottomNav() {
           className="absolute left-1/2 -translate-x-1/2 -top-5 w-14 h-14 rounded-full flex items-center justify-center bg-accent-500 shadow-lg shadow-accent-500/30 ring-4 active:scale-95 transition-transform"
           style={{ "--tw-ring-color": "var(--bg)" }}
         >
-          <Plus size={26} className="text-white" strokeWidth={2.5} />
+          <Plus size={26} strokeWidth={2.5} style={{ color: "var(--bg-surface)" }} />
         </button>
       </div>
     </nav>
