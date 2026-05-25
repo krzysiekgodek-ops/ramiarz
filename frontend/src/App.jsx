@@ -9,6 +9,7 @@ import OrdersPage     from "./pages/OrdersPage";
 import SettingsPage   from "./pages/SettingsPage";
 import AdminPage      from "./pages/AdminPage";
 import Navbar         from "./components/layout/Navbar";
+import BottomNav      from "./components/layout/BottomNav";
 
 const queryClient = new QueryClient();
 
@@ -29,11 +30,11 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={firebaseUser ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route path="/" element={<ProtectedRoute><Navbar /><CalculatorPage /></ProtectedRoute>} />
-      <Route path="/cenniki" element={<ProtectedRoute><Navbar /><MouldingsPage /></ProtectedRoute>} />
-      <Route path="/zlecenia" element={<ProtectedRoute><Navbar /><OrdersPage /></ProtectedRoute>} />
-      <Route path="/ustawienia" element={<ProtectedRoute><Navbar /><SettingsPage /></ProtectedRoute>} />
-      <Route path="/admin" element={<ProtectedRoute adminOnly><Navbar /><AdminPage /></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute><Navbar /><CalculatorPage /><BottomNav /></ProtectedRoute>} />
+      <Route path="/cenniki" element={<ProtectedRoute><Navbar /><MouldingsPage /><BottomNav /></ProtectedRoute>} />
+      <Route path="/zlecenia" element={<ProtectedRoute><Navbar /><OrdersPage /><BottomNav /></ProtectedRoute>} />
+      <Route path="/ustawienia" element={<ProtectedRoute><Navbar /><SettingsPage /><BottomNav /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute adminOnly><Navbar /><AdminPage /><BottomNav /></ProtectedRoute>} />
     </Routes>
   );
 }

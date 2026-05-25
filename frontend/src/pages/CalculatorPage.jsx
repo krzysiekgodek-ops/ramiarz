@@ -4,7 +4,7 @@ import {
   Calculator, RefreshCw, AlertCircle, ChevronDown, Layers, Square,
   Building2, Save, Printer, MessageSquare, X, Package, Check, TrendingUp,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useCalculator } from "../hooks/useCalculator";
@@ -312,6 +312,7 @@ function SaveModal({ total, onClose, onSaved, initialDetails = "" }) {
 export default function CalculatorPage() {
   const { dbUser } = useAuth();
   const shop = dbUser?.settings ?? null;
+  const location = useLocation();
   const { params, updateParam, result, loading, error, calculate, reset } = useCalculator();
 
   const [mouldingsRaw,            setMouldingsRaw]            = useState([]);
@@ -329,6 +330,15 @@ export default function CalculatorPage() {
   const [showPrint,          setShowPrint]          = useState(false);
   const [saveModalOpen,      setSaveModalOpen]      = useState(false);
   const [savedOk,            setSavedOk]            = useState(false);
+
+  // „Nowa wycena" z dolnego paska (przycisk +) — czyści formularz nawet gdy już jesteśmy w kalkulatorze.
+  useEffect(() => {
+    if (location.state?.newQuote) {
+      reset();
+      setNotes("");
+      setSavedOk(false);
+    }
+  }, [location.state?.newQuote, reset]);
 
   useEffect(() => {
     const load = async () => {
@@ -396,7 +406,7 @@ export default function CalculatorPage() {
   };
 
   return (
-    <main className="min-h-screen pt-20 pb-10 px-4 max-w-5xl mx-auto">
+    <main className="min-h-screen pt-20 pb-28 md:pb-10 px-4 max-w-5xl mx-auto">
       {/* Nagłówek */}
       <div className="flex items-center gap-3 mb-8">
         <div className="p-2.5 rounded-xl bg-accent-500/20">

@@ -432,7 +432,7 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("users");
 
   return (
-    <main className="min-h-screen pt-20 pb-10 px-4 max-w-5xl mx-auto">
+    <main className="min-h-screen pt-20 pb-28 md:pb-10 px-4 max-w-5xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2.5 rounded-xl bg-accent-500/20">
           <ShieldCheck size={22} className="text-accent-400" />

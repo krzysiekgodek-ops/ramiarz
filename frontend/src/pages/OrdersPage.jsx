@@ -450,7 +450,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <main className="min-h-screen pt-20 pb-10 px-4 max-w-5xl mx-auto">
+    <main className="min-h-screen pt-20 pb-28 md:pb-10 px-4 max-w-5xl mx-auto">
       {/* Nagłówek */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">

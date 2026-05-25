@@ -34,8 +34,8 @@ export default function Navbar() {
         Ramiarz Master
       </span>
 
-      {/* Nawigacja */}
-      <div className="flex items-center gap-1 flex-1 overflow-x-auto">
+      {/* Nawigacja — pełna tylko na desktopie (na telefonie linki są w dolnym pasku) */}
+      <div className="hidden md:flex items-center gap-1 flex-1 overflow-x-auto">
         {links.map(({ to, icon: Icon, label }) => {
           const active = pathname === to;
           return (
@@ -70,6 +70,23 @@ export default function Navbar() {
           </Link>
         )}
       </div>
+
+      {/* Spacer na telefonie — wypycha akcje do prawej (linki są w dolnym pasku) */}
+      <div className="flex-1 md:hidden" />
+
+      {/* Ustawienia — tylko telefon (na desktopie jest w linkach powyżej) */}
+      <Link
+        to="/ustawienia"
+        title="Ustawienia"
+        className={`md:hidden flex items-center p-2 rounded-full transition-colors shrink-0 ${
+          pathname === "/ustawienia"
+            ? "bg-black text-white dark:bg-white dark:text-black"
+            : "hover:bg-black/5 dark:hover:bg-white/5"
+        }`}
+        style={pathname === "/ustawienia" ? undefined : { color: "var(--text-muted)" }}
+      >
+        <Settings size={16} />
+      </Link>
 
       {/* Motyw */}
       <button

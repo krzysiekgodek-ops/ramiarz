@@ -327,7 +327,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <main className="min-h-screen pt-20 pb-10 px-4 max-w-2xl mx-auto">
+    <main className="min-h-screen pt-20 pb-28 md:pb-10 px-4 max-w-2xl mx-auto">
       {/* Nagłówek */}
       <div className="flex items-center gap-3 mb-8">
         <div className="p-2.5 rounded-xl bg-accent-500/20">
