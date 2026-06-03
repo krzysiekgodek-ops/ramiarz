@@ -24,6 +24,7 @@ async def get_me(user: User = Depends(get_current_user), db: Session = Depends(g
             "address":      settings.address      if settings else "",
             "phone":        settings.phone        if settings else "",
             "email":        settings.email        if settings else "",
+            "website":      settings.website      if settings else "",
         } if settings else None,
     }
 
@@ -33,6 +34,7 @@ class SettingsUpdate(BaseModel):
     address:      Optional[str] = None
     phone:        Optional[str] = None
     email:        Optional[str] = None
+    website:      Optional[str] = None
 
 
 @router.put("/settings")
@@ -53,6 +55,8 @@ async def update_settings(
         settings.phone = body.phone
     if body.email is not None:
         settings.email = body.email
+    if body.website is not None:
+        settings.website = body.website
     db.commit()
     db.refresh(settings)
     return {"ok": True}

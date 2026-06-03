@@ -16,6 +16,13 @@ def run_migrations():
                 conn.execute(text("ALTER TABLE orders ADD COLUMN pickup_date TEXT"))
                 conn.commit()
 
+    if inspector.has_table("settings"):
+        cols = {col["name"] for col in inspector.get_columns("settings")}
+        with engine.connect() as conn:
+            if "website" not in cols:
+                conn.execute(text("ALTER TABLE settings ADD COLUMN website TEXT DEFAULT ''"))
+                conn.commit()
+
     if inspector.has_table("additional_materials"):
         with engine.connect() as conn:
             conn.execute(text(

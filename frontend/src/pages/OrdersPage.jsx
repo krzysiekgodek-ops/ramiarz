@@ -361,7 +361,12 @@ function PrintSheet({ order, mode, shop }) {
               <div>Data: {date}</div>
             </div>
             {order.customer && <div>Klient: {order.customer}</div>}
-            {shop?.address && <div style={{ fontSize: 11, color: "#555" }}>{shop.company_name} · {shop.address}</div>}
+            <div style={{ fontSize: 11, color: "#555", marginTop: 3 }}>
+              {shop?.company_name}{shop?.address ? ` · ${shop.address}` : ""}
+              {shop?.phone ? ` · Tel: ${shop.phone}` : ""}
+              {shop?.email ? ` · ${shop.email}` : ""}
+              {shop?.website ? ` · ${shop.website}` : ""}
+            </div>
             <div style={{ marginTop: 6, display: "flex", justifyContent: "space-between" }}>
               <div>Zaliczka: <strong>{deposit.toFixed(2)} zł</strong></div>
               <div>Do zapłaty: <strong>{remaining > 0 ? `${remaining.toFixed(2)} zł` : "Rozliczone"}</strong></div>

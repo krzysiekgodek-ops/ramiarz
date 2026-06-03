@@ -33,7 +33,8 @@ class WorkshopSettings(Base):
     address = Column(String, default="")
     phone = Column(String, default="")
     email = Column(String, default="")
-    
+    website = Column(String, default="")
+
     owner = relationship("User", back_populates="settings")
 
 class GlobalSupplier(Base):

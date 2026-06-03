@@ -145,6 +145,7 @@ export default function SettingsPage() {
     address:      "",
     phone:        "",
     email:        "",
+    website:      "",
   });
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState(false);
@@ -173,6 +174,7 @@ export default function SettingsPage() {
             address:      data.settings.address      ?? "",
             phone:        data.settings.phone        ?? "",
             email:        data.settings.email        ?? "",
+            website:      data.settings.website      ?? "",
           });
         }
       } catch {
@@ -414,6 +416,7 @@ export default function SettingsPage() {
             <Field label="Adres"            value={form.address}      onChange={update("address")}      placeholder="ul. Przykładowa 1, 00-000 Warszawa" />
             <Field label="Telefon"          value={form.phone}        onChange={update("phone")}        placeholder="+48 000 000 000" />
             <Field label="Email kontaktowy" value={form.email}        onChange={update("email")}        type="email" placeholder="kontakt@warsztat.pl" />
+            <Field label="Strona WWW"       value={form.website}      onChange={update("website")}      placeholder="www.mojwarsztat.pl" />
           </div>
         )}
       </div>
