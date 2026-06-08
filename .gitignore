@@ -35,3 +35,4 @@ frontend/.env.local
 start_backend.bat
 start_frontend.bat
 deploy.bat
+secret/

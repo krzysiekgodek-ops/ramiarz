@@ -361,7 +361,7 @@ function PrintSheet({ order, mode, shop }) {
               <div>Data: {date}</div>
             </div>
             {order.customer && <div>Klient: {order.customer}</div>}
-            <div style={{ fontSize: 11, color: "#555", marginTop: 3 }}>
+            <div style={{ fontSize: 12, marginTop: 3 }}>
               {shop?.company_name}{shop?.address ? ` · ${shop.address}` : ""}
               {shop?.phone ? ` · Tel: ${shop.phone}` : ""}
               {shop?.email ? ` · ${shop.email}` : ""}
