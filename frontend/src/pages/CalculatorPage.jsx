@@ -407,7 +407,7 @@ function SaveModal({ total, onClose, onSaved, initialDetails = "", shop }) {
               <div>Data: {new Date().toLocaleDateString("pl-PL")}</div>
             </div>
             {savedOrder.customer && <div>Klient: {savedOrder.customer}</div>}
-            <div style={{ fontSize: 12, marginTop: 3 }}>
+            <div style={{ fontSize: 12, fontWeight: "bold", marginTop: 3 }}>
               {shop?.company_name}{shop?.address ? ` · ${shop.address}` : ""}
               {shop?.phone ? ` · Tel: ${shop.phone}` : ""}
               {shop?.email ? ` · ${shop.email}` : ""}
