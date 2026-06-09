@@ -399,7 +399,9 @@ function SaveModal({ total, onClose, onSaved, initialDetails = "", shop }) {
             <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: 1 }}>Kwota do zapłaty</div>
             <strong style={{ fontSize: 22 }}>{(savedOrder.total_brutto ?? 0).toFixed(2)} zł</strong>
           </div>
-          <div style={{ borderTop: "1px dashed #999", margin: "24px 0" }} />
+          <div style={{ position: "relative", borderTop: "1px dashed #999", margin: "24px 0" }}>
+            <span style={{ position: "absolute", left: 12, top: -9, background: "#fff", padding: "0 4px", fontSize: 13, color: "#555", lineHeight: 1 }}>✂</span>
+          </div>
           <div style={{ fontSize: 12 }}>
             <div style={{ fontSize: 13, fontWeight: "bold", marginBottom: 6 }}>Potwierdzenie przyjęcia zlecenia</div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -419,6 +421,11 @@ function SaveModal({ total, onClose, onSaved, initialDetails = "", shop }) {
             </div>
             {savedOrder.pickup_date && (
               <div style={{ marginTop: 4 }}>Termin odbioru: <strong>{new Date(savedOrder.pickup_date).toLocaleDateString("pl-PL")}</strong></div>
+            )}
+            {(savedOrder.deposit ?? 0) > 0 && (
+              <div style={{ marginTop: 30, width: 200, marginLeft: "auto" }}>
+                <div style={{ borderTop: "1px solid #000", paddingTop: 4, fontSize: 11, textAlign: "center" }}>Podpis przyjmującego</div>
+              </div>
             )}
           </div>
         </div>,

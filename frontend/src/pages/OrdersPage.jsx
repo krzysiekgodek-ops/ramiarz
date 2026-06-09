@@ -350,8 +350,10 @@ function PrintSheet({ order, mode, shop }) {
             <strong style={{ fontSize: 22 }}>{(order.total_brutto ?? 0).toFixed(2)} zł</strong>
           </div>
 
-          {/* Linia przerywana */}
-          <div style={{ borderTop: "1px dashed #999", margin: "24px 0" }} />
+          {/* Linia odcięcia z nożyczkami */}
+          <div style={{ position: "relative", borderTop: "1px dashed #999", margin: "24px 0" }}>
+            <span style={{ position: "absolute", left: 12, top: -9, background: "#fff", padding: "0 4px", fontSize: 13, color: "#555", lineHeight: 1 }}>✂</span>
+          </div>
 
           {/* Potwierdzenie dla klienta (dolna 1/4) */}
           <div style={{ fontSize: 12 }}>
@@ -372,6 +374,11 @@ function PrintSheet({ order, mode, shop }) {
               <div>Do zapłaty: <strong>{remaining > 0 ? `${remaining.toFixed(2)} zł` : "Rozliczone"}</strong></div>
             </div>
             <div style={{ marginTop: 4 }}>Termin odbioru: <strong>{pickupFormatted}</strong></div>
+            {deposit > 0 && (
+              <div style={{ marginTop: 30, width: 200, marginLeft: "auto" }}>
+                <div style={{ borderTop: "1px solid #000", paddingTop: 4, fontSize: 11, textAlign: "center" }}>Podpis przyjmującego</div>
+              </div>
+            )}
           </div>
         </div>
       ) : (
