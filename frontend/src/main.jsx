@@ -9,8 +9,5 @@ createRoot(document.getElementById("root")).render(
   </StrictMode>
 );
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => {});
-  });
-}
+// Rejestracja Service Workera jest wstrzykiwana automatycznie przez vite-plugin-pwa
+// (registerType: "autoUpdate"). Nie rejestrujemy go tutaj ręcznie.

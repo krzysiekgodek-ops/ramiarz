@@ -1,5 +1,30 @@
-﻿RewriteEngine On
+RewriteEngine On
 RewriteCond %{REQUEST_URI} !^/api
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ /index.html [L]
+
+# Nagłówki cache: index.html / Service Worker / manifest NIGDY nie mogą być
+# trzymane na stałe w cache przeglądarki ani proxy — inaczej zostaje podany stary
+# index.html wskazujący na nieistniejący już hash pliku JS (błąd 404).
+# Hashowane assety (np. /assets/index-XXXX.js) są wersjonowane nazwą, więc można
+# je cache'ować bezterminowo (immutable).
+<IfModule mod_headers.c>
+  # index.html oraz pliki Service Workera — zawsze rewalidacja
+  <FilesMatch "(^index\.html$|service-worker\.js$|sw\.js$|workbox-.*\.js$|registerSW\.js$|manifest\.webmanifest$)">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  # Hashowane assety — cache na rok, immutable
+  <FilesMatch "\.(?:js|css|woff2?|png|jpg|jpeg|gif|svg|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Reguła no-cache dla index.html/SW musi mieć priorytet nad regułą immutable
+  # powyżej (FilesMatch nakłada się dla *.js) — dlatego powtarzamy ją na końcu.
+  <FilesMatch "(service-worker\.js$|sw\.js$|workbox-.*\.js$|registerSW\.js$)">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+</IfModule>

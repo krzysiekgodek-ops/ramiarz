@@ -36,3 +36,7 @@ start_backend.bat
 start_frontend.bat
 deploy.bat
 secret/
+
+dist/
+dist.tar.gz
+*.tar.gz
