@@ -108,3 +108,14 @@ class Advertisement(Base):
     link_url = Column(String, nullable=True)
     pdf_filename = Column(String, nullable=True)
     active_until = Column(DateTime, nullable=False)
+
+
+class HelpArticle(Base):
+    """Treści pomocy — globalne, edytuje tylko admin, czytają wszyscy."""
+    __tablename__ = "help_articles"
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False)
+    content = Column(String, default="")   # HTML z edytora (sanityzowany przy wyświetlaniu)
+    position = Column(Integer, default=0)  # kolejność wyświetlania
+    created_at = Column(DateTime, default=get_utc_now)
+    updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)

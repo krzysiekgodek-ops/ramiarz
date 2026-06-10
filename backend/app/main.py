@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from app.database import engine
 from app.models import models
-from app.routes import auth, calculator, orders, mouldings, materials, admin
+from app.routes import auth, calculator, orders, mouldings, materials, admin, help
 
 load_dotenv()
 
@@ -31,6 +31,7 @@ app.include_router(orders.router,     prefix="/api/orders",     tags=["orders"])
 app.include_router(mouldings.router,  prefix="/api/mouldings",  tags=["mouldings"])
 app.include_router(materials.router,  prefix="/api/materials",  tags=["materials"])
 app.include_router(admin.router,      prefix="/api/admin",      tags=["admin"])
+app.include_router(help.router,       prefix="/api/help",       tags=["help"])
 
 @app.get("/api/health")
 async def health():

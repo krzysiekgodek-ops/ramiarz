@@ -2,13 +2,14 @@ import { Link, useLocation } from "react-router-dom";
 import { logout } from "../../services/firebase";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
-import { Calculator, BookOpen, Archive, Settings, LogOut, ShieldCheck, Sun, Moon, Monitor } from "lucide-react";
+import { Calculator, BookOpen, Archive, Settings, HelpCircle, LogOut, ShieldCheck, Sun, Moon, Monitor } from "lucide-react";
 
 const links = [
   { to: "/",           icon: Calculator, label: "Kalkulator" },
   { to: "/cenniki",    icon: BookOpen,   label: "Cenniki"    },
   { to: "/zlecenia",   icon: Archive,    label: "Zlecenia"   },
   { to: "/ustawienia", icon: Settings,   label: "Ustawienia" },
+  { to: "/pomoc",      icon: HelpCircle, label: "Pomoc"      },
 ];
 
 const THEME_ICONS  = { light: Sun, dark: Moon, system: Monitor };
@@ -74,7 +75,19 @@ export default function Navbar() {
       {/* Spacer na telefonie — wypycha akcje do prawej (linki są w dolnym pasku) */}
       <div className="flex-1 md:hidden" />
 
-      {/* Ustawienia — tylko telefon (na desktopie jest w linkach powyżej) */}
+      {/* Pomoc + Ustawienia — tylko telefon (na desktopie są w linkach powyżej) */}
+      <Link
+        to="/pomoc"
+        title="Pomoc"
+        className={`md:hidden flex items-center p-2 rounded-full transition-colors shrink-0 ${
+          pathname === "/pomoc"
+            ? "bg-black text-white dark:bg-white dark:text-black"
+            : "hover:bg-black/5 dark:hover:bg-white/5"
+        }`}
+        style={pathname === "/pomoc" ? undefined : { color: "var(--text-muted)" }}
+      >
+        <HelpCircle size={16} />
+      </Link>
       <Link
         to="/ustawienia"
         title="Ustawienia"

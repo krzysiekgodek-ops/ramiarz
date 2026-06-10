@@ -7,6 +7,7 @@ import CalculatorPage from "./pages/CalculatorPage";
 import MouldingsPage  from "./pages/MouldingsPage";
 import OrdersPage     from "./pages/OrdersPage";
 import SettingsPage   from "./pages/SettingsPage";
+import HelpPage       from "./pages/HelpPage";
 import AdminPage      from "./pages/AdminPage";
 import Navbar         from "./components/layout/Navbar";
 import BottomNav      from "./components/layout/BottomNav";
@@ -34,6 +35,7 @@ function AppRoutes() {
       <Route path="/cenniki" element={<ProtectedRoute><Navbar /><MouldingsPage /><BottomNav /></ProtectedRoute>} />
       <Route path="/zlecenia" element={<ProtectedRoute><Navbar /><OrdersPage /><BottomNav /></ProtectedRoute>} />
       <Route path="/ustawienia" element={<ProtectedRoute><Navbar /><SettingsPage /><BottomNav /></ProtectedRoute>} />
+      <Route path="/pomoc" element={<ProtectedRoute><Navbar /><HelpPage /><BottomNav /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute adminOnly><Navbar /><AdminPage /><BottomNav /></ProtectedRoute>} />
     </Routes>
   );
