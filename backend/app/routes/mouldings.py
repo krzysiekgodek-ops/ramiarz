@@ -15,6 +15,7 @@ class MouldingOut(BaseModel):
     price_strip:   float
     price_framed:  float
     width_mm:      float
+    discontinued:  bool = False
     supplier_id:   Optional[int]
     supplier_name: Optional[str]
 
@@ -44,7 +45,8 @@ async def list_mouldings(
         MouldingOut(
             id=m.id, code=m.code,
             price_strip=m.price_strip, price_framed=m.price_framed,
-            width_mm=m.width_mm, supplier_id=m.supplier_id,
+            width_mm=m.width_mm, discontinued=m.discontinued,
+            supplier_id=m.supplier_id,
             supplier_name=suppliers.get(m.supplier_id),
         )
         for m in rows
@@ -76,5 +78,35 @@ async def create_moulding(
     return MouldingOut(
         id=m.id, code=m.code, price_strip=m.price_strip,
         price_framed=m.price_framed, width_mm=m.width_mm,
+        discontinued=m.discontinued,
+        supplier_id=m.supplier_id, supplier_name=supplier_name,
+    )
+
+
+class MouldingPatch(BaseModel):
+    discontinued: bool
+
+
+@router.patch("/{moulding_id}", response_model=MouldingOut)
+async def patch_moulding(
+    moulding_id: int,
+    body: MouldingPatch,
+    user: User = Depends(get_admin_user),
+    db:   Session = Depends(get_db)
+):
+    m = db.query(Moulding).filter(Moulding.id == moulding_id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Profil listwy nie istnieje")
+    m.discontinued = body.discontinued
+    db.commit()
+    db.refresh(m)
+    supplier_name = None
+    if m.supplier_id:
+        sup = db.query(GlobalSupplier).filter(GlobalSupplier.id == m.supplier_id).first()
+        supplier_name = sup.name if sup else None
+    return MouldingOut(
+        id=m.id, code=m.code, price_strip=m.price_strip,
+        price_framed=m.price_framed, width_mm=m.width_mm,
+        discontinued=m.discontinued,
         supplier_id=m.supplier_id, supplier_name=supplier_name,
     )

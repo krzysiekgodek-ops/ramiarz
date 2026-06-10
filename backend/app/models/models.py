@@ -79,7 +79,9 @@ class Moulding(Base):
     price_strip = Column(Float, nullable=False)
     price_framed = Column(Float, nullable=False)
     width_mm = Column(Float, nullable=False)
-    
+    # Wycofana z produkcji — ramiarz dostaje ostrzeżenie przy wycenie
+    discontinued = Column(Boolean, default=False, nullable=False)
+
     supplier = relationship("GlobalSupplier", back_populates="mouldings")
 
 class Order(Base):

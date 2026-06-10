@@ -1,8 +1,8 @@
 import { useEffect, useState, useRef } from "react";
 import {
-  ShieldCheck, Users, AlertCircle,
+  ShieldCheck, Users, AlertCircle, AlertTriangle,
   RefreshCw, Plus, Trash2, Upload, CheckCircle, Building2,
-  Crown, UserCheck, UserX, FileSpreadsheet,
+  Crown, UserCheck, UserX, FileSpreadsheet, Search, ChevronDown, ChevronUp,
 } from "lucide-react";
 import api from "../services/api";
 
@@ -189,6 +189,104 @@ function TabUsers() {
   );
 }
 
+// ─── Profile producenta — oznaczanie wycofanych z produkcji ───────────────────
+function SupplierMouldings({ supplierId }) {
+  const [mouldings, setMouldings] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [query,     setQuery]     = useState("");
+  const [error,     setError]     = useState(null);
+  const [savingId,  setSavingId]  = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    api.get("/mouldings", { params: { supplier_id: supplierId } })
+      .then(({ data }) => { if (active) setMouldings(Array.isArray(data) ? data : []); })
+      .catch((e) => { if (active) setError(e?.response?.data?.detail ?? "Błąd pobierania profili."); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [supplierId]);
+
+  const toggle = async (m) => {
+    setSavingId(m.id);
+    setError(null);
+    try {
+      const { data } = await api.patch(`/mouldings/${m.id}`, { discontinued: !m.discontinued });
+      setMouldings((prev) => prev.map((x) => (x.id === m.id ? data : x)));
+    } catch (e) {
+      setError(e?.response?.data?.detail ?? "Błąd zmiany statusu profilu.");
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const filtered = mouldings.filter((m) =>
+    m.code?.toLowerCase().includes(query.toLowerCase())
+  );
+
+  return (
+    <div className="mt-3 pt-3 border-t border-stone-200 dark:border-stone-800">
+      <div className="relative mb-3">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-dim)' }} />
+        <input
+          type="text"
+          placeholder="Szukaj profilu po kodzie…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="input-field pl-9 text-sm"
+        />
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-xs mb-2">
+          <AlertCircle size={13} /> <span>{error}</span>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex flex-col gap-1.5">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-9 rounded-lg bg-stone-200 dark:bg-stone-800 animate-pulse" />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <p className="text-xs py-3 text-center" style={{ color: 'var(--text-dim)' }}>
+          {query ? "Brak profili dla podanej frazy." : "Brak profili — wgraj cennik powyżej."}
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-1 max-h-72 overflow-y-auto pr-1">
+          {filtered.map((m) => (
+            <li
+              key={m.id}
+              className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="font-mono text-sm truncate" style={{ color: 'var(--text)' }}>{m.code}</span>
+                <span className="text-xs shrink-0" style={{ color: 'var(--text-dim)' }}>{m.width_mm} mm</span>
+              </div>
+              <button
+                onClick={() => toggle(m)}
+                disabled={savingId === m.id}
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full shrink-0 transition-colors ${
+                  m.discontinued
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                    : "bg-stone-200 text-stone-600 hover:bg-stone-300 dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-stone-700"
+                }`}
+                title={m.discontinued ? "Kliknij, aby oznaczyć jako produkowaną" : "Kliknij, aby oznaczyć jako wycofaną"}
+              >
+                {savingId === m.id
+                  ? <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                  : m.discontinued && <AlertTriangle size={11} />}
+                {m.discontinued ? "Wycofana" : "Produkowana"}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // ─── Zakładka: Producenci listew ──────────────────────────────────────────────
 function TabSuppliers() {
   const [suppliers,      setSuppliers]      = useState([]);
@@ -199,6 +297,7 @@ function TabSuppliers() {
   const [uploadTargetId, setUploadTargetId] = useState(null);
   const [uploading,      setUploading]      = useState(false);
   const [uploadResults,  setUploadResults]  = useState({});
+  const [expandedId,     setExpandedId]     = useState(null);
   const fileInputRef = useRef(null);
 
   const load = async () => {
@@ -384,6 +483,15 @@ function TabSuppliers() {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => setExpandedId((prev) => (prev === s.id ? null : s.id))}
+                        className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-stone-300 dark:border-stone-700 hover:border-accent-500/40 hover:text-accent-400 transition-colors"
+                        style={{ color: 'var(--text-dim)' }}
+                        title="Zarządzaj profilami (wycofane z produkcji)"
+                      >
+                        {expandedId === s.id ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        Profile
+                      </button>
+                      <button
                         onClick={() => handleUploadClick(s.id)}
                         disabled={uploading}
                         className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border border-stone-300 dark:border-stone-700 hover:border-accent-500/40 hover:text-accent-400 transition-colors"
@@ -404,6 +512,7 @@ function TabSuppliers() {
                       </button>
                     </div>
                   </div>
+                  {expandedId === s.id && <SupplierMouldings supplierId={s.id} />}
                   {res && (
                     <div className="mt-1.5 flex items-center gap-3 text-xs pl-6">
                       <CheckCircle size={12} className="text-emerald-500 shrink-0" />

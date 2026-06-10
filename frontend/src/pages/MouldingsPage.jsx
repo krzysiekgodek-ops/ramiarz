@@ -1,12 +1,22 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Plus, Search, AlertCircle, Package } from "lucide-react";
+import { BookOpen, Plus, Search, AlertCircle, AlertTriangle, Package } from "lucide-react";
 import api from "../services/api";
 
 // ─── Wiersz tabeli profilu ────────────────────────────────────────────────────
 function MouldingRow({ m }) {
   return (
     <tr className="border-b border-stone-200 dark:border-stone-800 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-      <td className="px-4 py-3 font-mono text-sm" style={{ color: 'var(--text)' }}>{m.code}</td>
+      <td className="px-4 py-3 font-mono text-sm" style={{ color: 'var(--text)' }}>
+        <div className="flex items-center gap-2">
+          <span>{m.code}</span>
+          {m.discontinued && (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+              <AlertTriangle size={10} />
+              wycofana
+            </span>
+          )}
+        </div>
+      </td>
       <td className="px-4 py-3 text-sm" style={{ color: 'var(--text-dim)' }}>{m.supplier_name ?? "—"}</td>
       <td className="px-4 py-3 text-right font-mono text-sm" style={{ color: 'var(--text)' }}>
         {m.price_strip?.toFixed(2)} zł

@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import {
-  Calculator, RefreshCw, AlertCircle, ChevronDown, Layers, Square,
+  Calculator, RefreshCw, AlertCircle, AlertTriangle, ChevronDown, Layers, Square,
   Building2, Save, Printer, MessageSquare, X, Package, Check, TrendingUp,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -520,11 +520,19 @@ export default function CalculatorPage() {
     (supplierId ? mouldingsRaw.filter((m) => m.supplier_id === supplierId) : mouldingsRaw)
       .map((m) => ({
         id:    m.id,
-        label: `${m.code} — ${m.price_strip?.toFixed(2)} zł/mb (${m.width_mm} mm)`,
+        label: `${m.discontinued ? "⚠ " : ""}${m.code} — ${m.price_strip?.toFixed(2)} zł/mb (${m.width_mm} mm)${m.discontinued ? " — wycofana" : ""}`,
       }));
 
   const mouldingOptionsMain  = toMouldingOptions(selectedSupplierIdMain);
   const mouldingOptionsLiner = toMouldingOptions(selectedSupplierIdLiner);
+
+  // Ostrzeżenie o wycofanych z produkcji listwach (główna / wkładka)
+  const selectedMain  = mouldingsRaw.find((m) => m.id === params.moulding_id);
+  const selectedLiner = mouldingsRaw.find((m) => m.id === params.liner_id);
+  const discontinuedSelected = [
+    selectedMain?.discontinued  ? selectedMain  : null,
+    selectedLiner?.discontinued ? selectedLiner : null,
+  ].filter(Boolean);
 
   const handleSaved = () => {
     setSavedOk(true);
@@ -667,6 +675,18 @@ export default function CalculatorPage() {
                       />
                     )}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {discontinuedSelected.length > 0 && (
+              <div className="mt-4 flex items-start gap-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-800/50 px-4 py-3 text-sm text-amber-800 dark:text-amber-300">
+                <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">Uwaga — producent już nie produkuje tej listwy</p>
+                  <p className="mt-0.5 text-xs">
+                    {discontinuedSelected.map((m) => m.code).join(", ")} — zadzwoń i dopytaj o dostępność przed przyjęciem zlecenia.
+                  </p>
                 </div>
               </div>
             )}

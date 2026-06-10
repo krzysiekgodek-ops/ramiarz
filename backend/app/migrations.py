@@ -29,3 +29,13 @@ def run_migrations():
                 "UPDATE additional_materials SET category = 'front' WHERE category = 'glass'"
             ))
             conn.commit()
+
+    if inspector.has_table("mouldings"):
+        cols = {col["name"] for col in inspector.get_columns("mouldings")}
+        with engine.connect() as conn:
+            if "discontinued" not in cols:
+                # DEFAULT FALSE działa na SQLite i PostgreSQL
+                conn.execute(text(
+                    "ALTER TABLE mouldings ADD COLUMN discontinued BOOLEAN NOT NULL DEFAULT FALSE"
+                ))
+                conn.commit()
