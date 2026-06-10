@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-from app.dependencies import get_active_user, get_admin_user
+from app.dependencies import get_current_user, get_admin_user
 from app.models.models import User, HelpArticle
 from app.database import get_db
 
@@ -35,7 +35,7 @@ class HelpArticleUpdate(BaseModel):
 
 @router.get("", response_model=List[HelpArticleOut])
 async def list_articles(
-    user: User = Depends(get_active_user),
+    user: User = Depends(get_current_user),
     db:   Session = Depends(get_db)
 ):
     return (
