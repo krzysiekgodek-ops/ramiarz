@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Settings, Save, AlertCircle, CheckCircle, User, Building, Building2, ShieldCheck, ExternalLink, Package } from "lucide-react";
+import { Settings, Save, AlertCircle, CheckCircle, User, Building, Building2, ShieldCheck, ExternalLink, Package, Plus, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../hooks/useAuth";
@@ -79,10 +79,17 @@ function Field({ label, value, onChange, type = "text", placeholder = "" }) {
   );
 }
 
-function MaterialRow({ name, unit, showMargin, draft, onChange, onSave, saving, saved }) {
+function MaterialRow({ name, unit, showMargin, draft, onChange, onSave, saving, saved, onDelete }) {
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-stone-100 dark:border-stone-800/60 last:border-0">
-      <span className="flex-1 text-sm" style={{ color: "var(--text)" }}>{name}</span>
+      <span className="flex-1 text-sm flex items-center gap-1.5" style={{ color: "var(--text)" }}>
+        {name}
+        {onDelete && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-accent-500/15 text-accent-500" title="Pozycja własna">
+            własna
+          </span>
+        )}
+      </span>
       <div className="flex items-center gap-2">
         <div className="relative">
           <input
@@ -132,6 +139,15 @@ function MaterialRow({ name, unit, showMargin, draft, onChange, onSave, saving, 
               ? <CheckCircle size={11} />
               : <Save size={11} />}
         </button>
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            className="text-stone-400 hover:text-red-500 transition-colors p-1.5 shrink-0 rounded-lg"
+            title="Usuń pozycję własną"
+          >
+            <Trash2 size={13} />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -162,6 +178,9 @@ export default function SettingsPage() {
   const [matDrafts,  setMatDrafts]  = useState({});
   const [savingMat,  setSavingMat]  = useState(null);
   const [savedMat,   setSavedMat]   = useState(null);
+  const [materials,  setMaterials]  = useState([]);   // surowe pozycje z bazy (do pozycji własnych)
+  const [newItem,    setNewItem]    = useState({});   // pole "dodaj pozycję" per kategoria
+  const [addingItem, setAddingItem] = useState(null); // kategoria w trakcie dodawania
 
   useEffect(() => {
     const load = async () => {
@@ -210,12 +229,14 @@ export default function SettingsPage() {
   useEffect(() => {
     api.get("/materials")
       .then(({ data }) => {
+        const list = Array.isArray(data) ? data : [];
         const drafts = {};
-        (Array.isArray(data) ? data : []).forEach((m) => {
+        list.forEach((m) => {
           const key = `${m.category}::${m.name}`;
           drafts[key] = { price: m.price, margin: multToPct(m.margin) };
         });
         setMatDrafts(drafts);
+        setMaterials(list);
       })
       .catch(() => {});
   }, []);
@@ -313,11 +334,16 @@ export default function SettingsPage() {
     setSavingMat(key);
     setError(null);
     try {
-      await api.post("/materials/upsert", {
+      const { data } = await api.post("/materials/upsert", {
         name,
         category,
         price:  parseFloat(draft.price) || 0,
         margin: pctToMult(draft.margin),
+      });
+      // Utrzymuj świeżą listę surowych pozycji (id potrzebne do usuwania pozycji własnych)
+      setMaterials((prev) => {
+        const exists = prev.some((m) => m.id === data.id);
+        return exists ? prev.map((m) => (m.id === data.id ? data : m)) : [...prev, data];
       });
       setSavedMat(key);
       setTimeout(() => setSavedMat((prev) => (prev === key ? null : prev)), 2000);
@@ -325,6 +351,48 @@ export default function SettingsPage() {
       setError(e?.response?.data?.detail ?? "Błąd zapisu materiału.");
     } finally {
       setSavingMat(null);
+    }
+  };
+
+  // Dodawanie pozycji własnej w obrębie modułu (per-użytkownik, cena startowa 0)
+  const addCustomItem = async (category) => {
+    const name = (newItem[category] ?? "").trim();
+    if (!name) return;
+    const baseline = MATERIAL_CATALOG[category]?.items ?? [];
+    const existsBaseline = baseline.some((n) => n.toLowerCase() === name.toLowerCase());
+    const existsCustom = materials.some(
+      (m) => m.category === category && m.name.toLowerCase() === name.toLowerCase()
+    );
+    if (existsBaseline || existsCustom) {
+      setError(`Pozycja „${name}" już istnieje w tym module.`);
+      return;
+    }
+    setAddingItem(category);
+    setError(null);
+    try {
+      const { data } = await api.post("/materials/upsert", { name, category, price: 0, margin: 1.0 });
+      setMaterials((prev) => [...prev, data]);
+      setMatDrafts((prev) => ({ ...prev, [`${category}::${name}`]: { price: 0, margin: "0" } }));
+      setNewItem((prev) => ({ ...prev, [category]: "" }));
+    } catch (e) {
+      setError(e?.response?.data?.detail ?? "Błąd dodawania pozycji.");
+    } finally {
+      setAddingItem(null);
+    }
+  };
+
+  const deleteCustomItem = async (mat) => {
+    setError(null);
+    try {
+      await api.delete(`/materials/${mat.id}`);
+      setMaterials((prev) => prev.filter((m) => m.id !== mat.id));
+      setMatDrafts((prev) => {
+        const n = { ...prev };
+        delete n[`${mat.category}::${mat.name}`];
+        return n;
+      });
+    } catch (e) {
+      setError(e?.response?.data?.detail ?? "Błąd usuwania pozycji.");
     }
   };
 
@@ -562,6 +630,50 @@ export default function SettingsPage() {
                   />
                 );
               })}
+
+              {/* Pozycje własne (dodane przez użytkownika) */}
+              {materials
+                .filter((m) => m.category === category && !items.some((n) => n.toLowerCase() === m.name.toLowerCase()))
+                .map((m) => {
+                  const key = `${category}::${m.name}`;
+                  const draft = matDrafts[key] ?? { price: 0, margin: "0" };
+                  return (
+                    <MaterialRow
+                      key={`custom-${m.id}`}
+                      name={m.name}
+                      unit={unit}
+                      showMargin={!isFramePrice}
+                      draft={draft}
+                      onChange={(field, value) => updateMatDraft(category, m.name, field, value)}
+                      onSave={() => saveMat(category, m.name)}
+                      saving={savingMat === key}
+                      saved={savedMat === key}
+                      onDelete={() => deleteCustomItem(m)}
+                    />
+                  );
+                })}
+            </div>
+
+            {/* Dodaj własną pozycję */}
+            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-stone-100 dark:border-stone-800/60">
+              <input
+                type="text"
+                value={newItem[category] ?? ""}
+                onChange={(e) => setNewItem((prev) => ({ ...prev, [category]: e.target.value }))}
+                onKeyDown={(e) => e.key === "Enter" && addCustomItem(category)}
+                placeholder="Dodaj własną pozycję, np. oklejanie papierem…"
+                className="input-field flex-1 text-sm"
+              />
+              <button
+                onClick={() => addCustomItem(category)}
+                disabled={addingItem === category || !(newItem[category] ?? "").trim()}
+                className="btn-accent text-xs flex items-center gap-1.5 px-3 py-2 shrink-0"
+              >
+                {addingItem === category
+                  ? <span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                  : <Plus size={13} />}
+                Dodaj
+              </button>
             </div>
           </div>
         );
