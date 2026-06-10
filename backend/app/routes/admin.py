@@ -7,8 +7,9 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 from app.dependencies import get_admin_user
-from app.models.models import User, GlobalSupplier, Moulding
+from app.models.models import User, GlobalSupplier, Moulding, UserSupplierConfig
 from app.database import get_db
+from app.services import email_service
 
 router = APIRouter()
 
@@ -77,6 +78,85 @@ async def patch_user(
     db.commit()
     db.refresh(target)
     return target
+
+
+# ─── Wysyłka maili do użytkowników ─────────────────────────────────────────────
+
+class SendEmailBody(BaseModel):
+    subject:     str
+    body:        str                       # tekst (zamieniany na prosty HTML)
+    target:      str                       # all | paid | supplier | selected
+    supplier_id: Optional[int]       = None
+    user_ids:    Optional[List[int]] = None
+
+
+def _email_config_status():
+    return {"configured": email_service.is_configured()}
+
+
+@router.get("/email-status")
+async def email_status(admin: User = Depends(get_admin_user)):
+    return _email_config_status()
+
+
+def _resolve_recipients(db: Session, body: SendEmailBody) -> List[User]:
+    q = db.query(User)
+    if body.target == "paid":
+        q = q.filter(User.is_paid == True)
+    elif body.target == "selected":
+        ids = body.user_ids or []
+        if not ids:
+            return []
+        q = q.filter(User.id.in_(ids))
+    elif body.target == "supplier":
+        if not body.supplier_id:
+            return []
+        sub = db.query(UserSupplierConfig.user_id).filter(
+            UserSupplierConfig.supplier_id == body.supplier_id
+        )
+        q = q.filter(User.id.in_(sub))
+    # "all" — bez dodatkowego filtra
+    return [u for u in q.all() if u.email]
+
+
+def _text_to_html(text: str) -> str:
+    import html
+    safe = html.escape(text).replace("\n", "<br>")
+    return (
+        '<div style="font-family:Arial,sans-serif;font-size:14px;'
+        f'color:#222;line-height:1.6;max-width:560px">{safe}</div>'
+    )
+
+
+@router.post("/send-email")
+async def send_email_to_users(
+    body:  SendEmailBody,
+    admin: User = Depends(get_admin_user),
+    db:    Session = Depends(get_db)
+):
+    if not email_service.is_configured():
+        raise HTTPException(
+            status_code=503,
+            detail="Wysyłka maili nie jest skonfigurowana (GMAIL_SENDER + konto serwisowe z delegacją domenową).",
+        )
+    if not body.subject.strip() or not body.body.strip():
+        raise HTTPException(status_code=422, detail="Temat i treść są wymagane.")
+
+    recipients = _resolve_recipients(db, body)
+    if not recipients:
+        raise HTTPException(status_code=422, detail="Brak odbiorców dla wybranego kryterium.")
+
+    html_body = _text_to_html(body.body)
+    sent = 0
+    failed: List[str] = []
+    for u in recipients:
+        try:
+            email_service.send_email(u.email, body.subject, html_body)
+            sent += 1
+        except Exception:  # noqa: BLE001
+            failed.append(u.email)
+
+    return {"total": len(recipients), "sent": sent, "failed": failed}
 
 
 # ─── Producenci listew ────────────────────────────────────────────────────────

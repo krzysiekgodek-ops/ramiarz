@@ -141,6 +141,12 @@ async def get_current_user(
             print(f">>> Nowy użytkownik ADMIN: {email}")
         else:
             print(f">>> Nowy użytkownik w bazie: {email}")
+        # Mail powitalny — fire-and-forget, nie może zablokować logowania
+        try:
+            from app.services.email_service import send_welcome_email_async
+            send_welcome_email_async(email)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"Pominięto mail powitalny dla {email}: {e}")
     else:
         # Jeśli konto już istnieje ale jeszcze nie ma roli admina — nadaj
         if email.lower() in initial_admins and not user.is_superadmin:

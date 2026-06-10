@@ -3,6 +3,7 @@ import {
   ShieldCheck, Users, AlertCircle, AlertTriangle,
   RefreshCw, Plus, Trash2, Upload, CheckCircle, Building2,
   Crown, UserCheck, UserX, FileSpreadsheet, Search, ChevronDown, ChevronUp,
+  Mail, Send, X,
 } from "lucide-react";
 import api from "../services/api";
 
@@ -28,7 +29,7 @@ function StatCard({ icon: Icon, label, value, accent = false }) {
 }
 
 // ─── Wiersz użytkownika ───────────────────────────────────────────────────────
-function UserRow({ u, onTogglePaid, onToggleAdmin }) {
+function UserRow({ u, selected, onSelect, onTogglePaid, onToggleAdmin }) {
   const trial = u.trial_expires
     ? new Date(u.trial_expires).toLocaleDateString("pl-PL")
     : "—";
@@ -38,6 +39,15 @@ function UserRow({ u, onTogglePaid, onToggleAdmin }) {
 
   return (
     <tr className="border-b border-stone-200 dark:border-stone-800 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+      <td className="px-3 py-3 text-center">
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => onSelect(u.id)}
+          className="accent-amber-500 cursor-pointer"
+          aria-label={`Zaznacz ${u.email}`}
+        />
+      </td>
       <td className="px-4 py-3 text-sm" style={{ color: 'var(--text)' }}>
         <div className="flex items-center gap-2">
           {u.is_superadmin && (
@@ -78,12 +88,186 @@ function UserRow({ u, onTogglePaid, onToggleAdmin }) {
   );
 }
 
+// ─── Modal: wysyłka maili do użytkowników ─────────────────────────────────────
+function EmailComposeModal({ selectedIds, onClose }) {
+  const [target,     setTarget]     = useState(selectedIds.length > 0 ? "selected" : "all");
+  const [suppliers,  setSuppliers]  = useState([]);
+  const [supplierId, setSupplierId] = useState("");
+  const [subject,    setSubject]    = useState("");
+  const [body,       setBody]       = useState("");
+  const [status,     setStatus]     = useState(null);
+  const [sending,    setSending]    = useState(false);
+  const [error,      setError]      = useState(null);
+  const [result,     setResult]     = useState(null);
+
+  useEffect(() => {
+    api.get("/admin/email-status").then(({ data }) => setStatus(data)).catch(() => setStatus({ configured: false }));
+    api.get("/admin/suppliers").then(({ data }) => setSuppliers(Array.isArray(data) ? data : [])).catch(() => {});
+  }, []);
+
+  const TARGETS = [
+    { id: "selected", label: `Zaznaczeni (${selectedIds.length})`, disabled: selectedIds.length === 0 },
+    { id: "all",      label: "Wszyscy",        disabled: false },
+    { id: "paid",     label: "Z abonamentem",  disabled: false },
+    { id: "supplier", label: "Wg producenta",  disabled: false },
+  ];
+
+  const canSend =
+    !sending &&
+    subject.trim() &&
+    body.trim() &&
+    (target !== "supplier" || supplierId) &&
+    (target !== "selected" || selectedIds.length > 0);
+
+  const send = async () => {
+    setSending(true);
+    setError(null);
+    setResult(null);
+    try {
+      const payload = { subject, body, target };
+      if (target === "selected") payload.user_ids = selectedIds;
+      if (target === "supplier") payload.supplier_id = supplierId ? Number(supplierId) : null;
+      const { data } = await api.post("/admin/send-email", payload);
+      setResult(data);
+    } catch (e) {
+      setError(e?.response?.data?.detail ?? "Błąd wysyłki maili.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="glass-card p-6 w-full max-w-lg overflow-y-auto max-h-[92vh]">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-semibold text-lg flex items-center gap-2" style={{ color: "var(--text)" }}>
+            <Mail size={18} className="text-accent-400" /> Wyślij mail
+          </h3>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-300">
+            <X size={18} />
+          </button>
+        </div>
+
+        {status && !status.configured && (
+          <div className="flex items-start gap-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-800/50 px-4 py-3 text-sm text-amber-800 dark:text-amber-300 mb-4">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+            <span>Wysyłka maili nie jest skonfigurowana (GMAIL_SENDER + konto serwisowe z delegacją domenową). Treść możesz przygotować, ale wysyłka się nie powiedzie.</span>
+          </div>
+        )}
+
+        {result ? (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <div className="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center">
+              <CheckCircle size={28} className="text-emerald-500" />
+            </div>
+            <p className="text-sm text-center" style={{ color: "var(--text)" }}>
+              Wysłano <strong>{result.sent}</strong> z <strong>{result.total}</strong> maili.
+            </p>
+            {result.failed?.length > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                Nie dostarczono: {result.failed.join(", ")}
+              </p>
+            )}
+            <button onClick={onClose} className="btn-accent text-sm mt-2">Zamknij</button>
+          </div>
+        ) : (
+          <>
+            <label className="label">Odbiorcy</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {TARGETS.map((t) => (
+                <button
+                  key={t.id}
+                  disabled={t.disabled}
+                  onClick={() => setTarget(t.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+                    target === t.id
+                      ? "bg-accent-500/20 border-accent-500/40 text-accent-400"
+                      : "border-stone-300 dark:border-stone-700 disabled:opacity-40"
+                  }`}
+                  style={target !== t.id ? { color: "var(--text-dim)" } : {}}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {target === "supplier" && (
+              <div className="mb-3">
+                <select
+                  value={supplierId}
+                  onChange={(e) => setSupplierId(e.target.value)}
+                  className="input-field"
+                >
+                  <option value="">— wybierz producenta —</option>
+                  {suppliers.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="mb-3">
+              <label className="label">Temat</label>
+              <input
+                type="text"
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="np. Nowy producent listew w ofercie"
+                className="input-field"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="label">Treść</label>
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={7}
+                placeholder="Treść wiadomości…"
+                className="input-field resize-none"
+              />
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm mb-3">
+                <AlertCircle size={14} /> <span>{error}</span>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button onClick={onClose} className="btn-ghost flex-1 text-sm">Anuluj</button>
+              <button
+                onClick={send}
+                disabled={!canSend}
+                className="btn-accent flex-1 flex items-center justify-center gap-2 text-sm"
+              >
+                {sending
+                  ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  : <Send size={14} />}
+                {sending ? "Wysyłam…" : "Wyślij"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Zakładka: Użytkownicy ────────────────────────────────────────────────────
 function TabUsers() {
-  const [users,   setUsers]   = useState([]);
-  const [stats,   setStats]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const [users,    setUsers]    = useState([]);
+  const [stats,    setStats]    = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
+  const [selected, setSelected] = useState([]);   // id zaznaczonych użytkowników
+  const [showMail, setShowMail] = useState(false);
+
+  const toggleSelect = (id) =>
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const allSelected = users.length > 0 && selected.length === users.length;
+  const toggleSelectAll = () =>
+    setSelected(allSelected ? [] : users.map((u) => u.id));
 
   const load = async () => {
     setLoading(true);
@@ -143,15 +327,34 @@ function TabUsers() {
           <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--text-dim)' }}>
             Lista użytkowników
           </h2>
-          <button onClick={load} disabled={loading}
-            className="btn-ghost text-xs flex items-center gap-1.5 px-3 py-1.5">
-            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-            Odśwież
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowMail(true)}
+              className="btn-accent text-xs flex items-center gap-1.5 px-3 py-1.5"
+              title="Wyślij mail do użytkowników"
+            >
+              <Mail size={13} />
+              Wyślij mail{selected.length > 0 ? ` (${selected.length})` : ""}
+            </button>
+            <button onClick={load} disabled={loading}
+              className="btn-ghost text-xs flex items-center gap-1.5 px-3 py-1.5">
+              <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+              Odśwież
+            </button>
+          </div>
         </div>
         <table className="w-full">
           <thead>
             <tr className="border-b border-stone-200 dark:border-stone-800">
+              <th className="px-3 py-3 text-center">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                  className="accent-amber-500 cursor-pointer"
+                  aria-label="Zaznacz wszystkich"
+                />
+              </th>
               {["Email", "Dołączył", "Status", "Trial do", "Rola"].map((h, i) => (
                 <th key={h} className={`px-4 py-3 text-xs font-medium uppercase tracking-wider ${i === 0 ? "text-left" : "text-center"}`}
                   style={{ color: 'var(--text-dim)' }}>
@@ -164,7 +367,7 @@ function TabUsers() {
             {loading ? (
               [1, 2, 3].map((i) => (
                 <tr key={i} className="border-b border-stone-200 dark:border-stone-800">
-                  {[50, 20, 15, 20, 15].map((w, j) => (
+                  {[5, 50, 20, 15, 20, 15].map((w, j) => (
                     <td key={j} className="px-4 py-3">
                       <div className="h-4 rounded bg-stone-200 dark:bg-stone-800 animate-pulse" style={{ width: `${w}%` }} />
                     </td>
@@ -173,11 +376,18 @@ function TabUsers() {
               ))
             ) : users.length > 0 ? (
               users.map((u) => (
-                <UserRow key={u.id} u={u} onTogglePaid={togglePaid} onToggleAdmin={toggleAdmin} />
+                <UserRow
+                  key={u.id}
+                  u={u}
+                  selected={selected.includes(u.id)}
+                  onSelect={toggleSelect}
+                  onTogglePaid={togglePaid}
+                  onToggleAdmin={toggleAdmin}
+                />
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-dim)' }}>
+                <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-dim)' }}>
                   Brak użytkowników.
                 </td>
               </tr>
@@ -185,6 +395,13 @@ function TabUsers() {
           </tbody>
         </table>
       </div>
+
+      {showMail && (
+        <EmailComposeModal
+          selectedIds={selected}
+          onClose={() => setShowMail(false)}
+        />
+      )}
     </div>
   );
 }
