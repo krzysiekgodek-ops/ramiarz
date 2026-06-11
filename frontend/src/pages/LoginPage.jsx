@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { loginWithGoogle, loginWithEmail, registerWithEmail } from "../services/firebase";
-import { Frame, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { loginWithGoogle, loginWithEmail, registerWithEmail, resetPassword } from "../services/firebase";
+import { Frame, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from "lucide-react";
 
 export default function LoginPage() {
   const navigate   = useNavigate();
@@ -11,16 +11,34 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState("");
+  const [info, setInfo]         = useState("");
 
   const handleGoogle = async () => {
-    setError(""); setLoading(true);
+    setError(""); setInfo(""); setLoading(true);
     try { await loginWithGoogle(); navigate("/"); }
     catch (e) { setError("Błąd logowania przez Google"); }
     finally { setLoading(false); }
   };
 
+  const handleReset = async () => {
+    setError(""); setInfo("");
+    if (!email) { setError("Podaj swój email powyżej, wyślemy link do zmiany hasła"); return; }
+    setLoading(true);
+    try {
+      await resetPassword(email);
+      setInfo(`Wysłaliśmy link do zmiany hasła na ${email}. Sprawdź skrzynkę (także folder spam).`);
+    } catch (e) {
+      const msg = {
+        "auth/user-not-found": "Nie znaleziono konta z tym adresem email",
+        "auth/invalid-email":  "Nieprawidłowy format email",
+        "auth/missing-email":  "Podaj adres email",
+      }[e.code] || "Nie udało się wysłać linku — spróbuj ponownie";
+      setError(msg);
+    } finally { setLoading(false); }
+  };
+
   const handleEmail = async (e) => {
-    e.preventDefault(); setError(""); setLoading(true);
+    e.preventDefault(); setError(""); setInfo(""); setLoading(true);
     try {
       if (mode === "login") await loginWithEmail(email, password);
       else await registerWithEmail(email, password);
@@ -102,9 +120,24 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {mode === "login" && (
+              <div className="text-right -mt-1">
+                <button type="button" onClick={handleReset} disabled={loading}
+                  className="text-xs text-accent-400 hover:text-accent-300 transition-colors disabled:opacity-50">
+                  Nie pamiętasz hasła?
+                </button>
+              </div>
+            )}
+
             {error && (
               <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 text-red-400 text-sm">
                 <AlertCircle size={14} className="shrink-0" />{error}
+              </div>
+            )}
+
+            {info && (
+              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 rounded-lg px-3 py-2 text-green-400 text-sm">
+                <CheckCircle size={14} className="shrink-0" />{info}
               </div>
             )}
 
@@ -119,7 +152,7 @@ export default function LoginPage() {
 
           <p className="text-center text-sm text-stone-500 mt-6">
             {mode === "login" ? "Nie masz konta? " : "Masz już konto? "}
-            <button onClick={() => { setMode(m => m === "login" ? "register" : "login"); setError(""); }}
+            <button onClick={() => { setMode(m => m === "login" ? "register" : "login"); setError(""); setInfo(""); }}
               className="text-accent-400 hover:text-accent-300 transition-colors">
               {mode === "login" ? "Zarejestruj się" : "Zaloguj się"}
             </button>
