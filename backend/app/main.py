@@ -33,6 +33,9 @@ app.include_router(materials.router,  prefix="/api/materials",  tags=["materials
 app.include_router(admin.router,      prefix="/api/admin",      tags=["admin"])
 app.include_router(help.router,       prefix="/api/help",       tags=["help"])
 
+from app.routes.adboxes import router as adboxes_router
+app.include_router(adboxes_router, prefix="/api/adboxes", tags=["adboxes"])
+
 from app.services.subscription_notifier import run_notifier
 
 @app.get("/api/cron/notify-expiring", include_in_schema=False)

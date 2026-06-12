@@ -49,3 +49,21 @@ def run_migrations():
                     "ALTER TABLE mouldings ADD COLUMN discontinued BOOLEAN NOT NULL DEFAULT FALSE"
                 ))
                 conn.commit()
+
+    if not inspector.has_table("ad_boxes"):
+        with engine.connect() as conn:
+            conn.execute(text("""
+                CREATE TABLE ad_boxes (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    slot        TEXT    NOT NULL UNIQUE,
+                    is_active   INTEGER DEFAULT 1,
+                    title       TEXT,
+                    body        TEXT,
+                    link_url    TEXT,
+                    link_label  TEXT,
+                    bg_color    TEXT,
+                    custom_html TEXT,
+                    updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.commit()

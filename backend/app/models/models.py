@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Boolean, func
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone, timedelta
 from app.database import Base
@@ -121,3 +121,20 @@ class HelpArticle(Base):
     position = Column(Integer, default=0)  # kolejność wyświetlania
     created_at = Column(DateTime, default=get_utc_now)
     updated_at = Column(DateTime, default=get_utc_now, onupdate=get_utc_now)
+
+
+class AdBox(Base):
+    """Box reklamowy — globalny, edytuje tylko admin, widoczny dla wszystkich.
+    Jeden rekord na slot (np. "calculator", "help")."""
+    __tablename__ = "ad_boxes"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    slot       = Column(String, nullable=False, unique=True)   # np. "calculator", "help"
+    is_active  = Column(Boolean, default=True)
+    title      = Column(String, nullable=True)
+    body       = Column(String, nullable=True)
+    link_url   = Column(String, nullable=True)
+    link_label = Column(String, nullable=True)
+    bg_color   = Column(String, nullable=True)                 # np. "#1a1a2e"
+    custom_html= Column(String, nullable=True)                 # zewnętrzny kod HTML (AdSense itp.)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

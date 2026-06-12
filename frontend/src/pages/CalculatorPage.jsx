@@ -9,6 +9,7 @@ import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useSubscription } from "../hooks/useSubscription";
 import { useCalculator } from "../hooks/useCalculator";
+import AdBox from "../components/AdBox";
 
 // ─── Pole numeryczne ─────────────────────────────────────────────────────────
 function NumericField({ label, value, onChange, min = 0, step = 1, unit = "cm" }) {
@@ -565,6 +566,11 @@ export default function CalculatorPage() {
           </h1>
           <p className="text-sm mt-0.5" style={{ color: "var(--text-dim)" }}>Wszystkie ceny brutto (VAT 23%)</p>
         </div>
+      </div>
+
+      {/* Box reklamowy */}
+      <div className="mb-6">
+        <AdBox slot="calculator" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

@@ -6,6 +6,7 @@ import {
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import RichTextEditor from "../components/RichTextEditor";
+import AdBox from "../components/AdBox";
 
 // Style treści (spójne z edytorem)
 const HELP_CONTENT_STYLES = `
@@ -215,6 +216,11 @@ export default function HelpPage() {
             Dodaj
           </button>
         )}
+      </div>
+
+      {/* Box reklamowy */}
+      <div className="mb-6">
+        <AdBox slot="help" />
       </div>
 
       {error && (

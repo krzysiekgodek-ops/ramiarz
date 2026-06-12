@@ -3,7 +3,7 @@ import {
   ShieldCheck, Users, AlertCircle, AlertTriangle,
   RefreshCw, Plus, Trash2, Upload, CheckCircle, Building2,
   Crown, UserCheck, UserX, FileSpreadsheet, Search, ChevronDown, ChevronUp,
-  Mail, Send, X, Calendar,
+  Mail, Send, X, Calendar, Megaphone,
 } from "lucide-react";
 import api from "../services/api";
 
@@ -11,6 +11,7 @@ import api from "../services/api";
 const TABS = [
   { id: "users",     label: "Użytkownicy",      icon: Users },
   { id: "suppliers", label: "Producenci listew", icon: Building2 },
+  { id: "adboxes",   label: "Reklamy",           icon: Megaphone },
 ];
 
 // ─── Karta statystyki ─────────────────────────────────────────────────────────
@@ -878,6 +879,144 @@ function TabSuppliers() {
   );
 }
 
+// ─── Zakładka: Reklamy (boxy) ─────────────────────────────────────────────────
+const AD_SLOTS = [
+  { slot: "calculator", label: "Kalkulator" },
+  { slot: "help",       label: "Pomoc" },
+];
+
+function AdBoxEditor({ slot, label }) {
+  const [data,    setData]    = useState(null);
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState(null);
+  const [saved,   setSaved]   = useState(false);
+
+  // pola formularza
+  const [isActive,   setIsActive]   = useState(true);
+  const [title,      setTitle]      = useState("");
+  const [body,       setBody]       = useState("");
+  const [linkUrl,    setLinkUrl]    = useState("");
+  const [linkLabel,  setLinkLabel]  = useState("");
+  const [bgColor,    setBgColor]    = useState("");
+  const [customHtml, setCustomHtml] = useState("");
+
+  useEffect(() => {
+    api.get(`/adboxes/${slot}`)
+      .then(({ data: d }) => {
+        setData(d);
+        setIsActive(d.is_active ?? true);
+        setTitle(d.title ?? "");
+        setBody(d.body ?? "");
+        setLinkUrl(d.link_url ?? "");
+        setLinkLabel(d.link_label ?? "");
+        setBgColor(d.bg_color ?? "");
+        setCustomHtml(d.custom_html ?? "");
+      })
+      .catch(() => {}); // brak boxu — puste pola
+  }, [slot]);
+
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      await api.put(`/adboxes/${slot}`, {
+        is_active:   isActive,
+        title:       title   || null,
+        body:        body    || null,
+        link_url:    linkUrl || null,
+        link_label:  linkLabel || null,
+        bg_color:    bgColor || null,
+        custom_html: customHtml || null,
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      setError(e?.response?.data?.detail ?? "Błąd zapisu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="glass-card p-5 flex flex-col gap-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-wide flex items-center gap-2" style={{ color: "var(--text-dim)" }}>
+          <Megaphone size={14} className="text-accent-400" />
+          Box: {label}
+        </h3>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <span className="text-xs" style={{ color: "var(--text-dim)" }}>Aktywny</span>
+          <div
+            onClick={() => setIsActive((v) => !v)}
+            className={`relative w-9 h-5 rounded-full transition-colors ${isActive ? "bg-accent-500" : "bg-stone-400 dark:bg-stone-700"}`}
+          >
+            <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${isActive ? "translate-x-4" : "translate-x-0.5"}`} />
+          </div>
+        </label>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="label">Tytuł</label>
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="input-field" placeholder="np. Promocja dla zakładów…" />
+        </div>
+        <div>
+          <label className="label">Kolor tła (hex, opcjonalne)</label>
+          <div className="flex items-center gap-2">
+            <input type="color" value={bgColor || "#ffffff"} onChange={(e) => setBgColor(e.target.value)}
+              className="w-10 h-9 rounded border border-stone-300 dark:border-stone-700 cursor-pointer bg-transparent p-0.5" />
+            <input type="text" value={bgColor} onChange={(e) => setBgColor(e.target.value)}
+              className="input-field flex-1" placeholder="#1a1a2e lub puste = domyślne" />
+          </div>
+        </div>
+        <div className="sm:col-span-2">
+          <label className="label">Treść (krótki opis)</label>
+          <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={2} className="input-field resize-none" placeholder="Kilka zdań opisu…" />
+        </div>
+        <div>
+          <label className="label">URL linku</label>
+          <input type="url" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} className="input-field" placeholder="https://…" />
+        </div>
+        <div>
+          <label className="label">Etykieta linku</label>
+          <input type="text" value={linkLabel} onChange={(e) => setLinkLabel(e.target.value)} className="input-field" placeholder="np. Sprawdź ofertę" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="label">Zewnętrzny HTML (AdSense / własny kod — nadpisuje treść statyczną)</label>
+          <textarea value={customHtml} onChange={(e) => setCustomHtml(e.target.value)} rows={4} className="input-field font-mono text-xs resize-y" placeholder="<script>…</script> lub <ins class='adsbygoogle'…>" />
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+          <AlertCircle size={14} /> <span>{error}</span>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <button onClick={save} disabled={saving} className="btn-accent flex items-center gap-2 text-sm">
+          {saving
+            ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            : <CheckCircle size={14} />}
+          {saving ? "Zapisuję…" : "Zapisz"}
+        </button>
+        {saved && <span className="text-xs text-emerald-500">✓ Zapisano</span>}
+      </div>
+    </div>
+  );
+}
+
+function TabAdBoxes() {
+  return (
+    <div className="flex flex-col gap-5 max-w-2xl">
+      {AD_SLOTS.map(({ slot, label }) => (
+        <AdBoxEditor key={slot} slot={slot} label={label} />
+      ))}
+    </div>
+  );
+}
+
 // ─── Strona główna admina ─────────────────────────────────────────────────────
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("users");
@@ -913,6 +1052,7 @@ export default function AdminPage() {
 
       {activeTab === "users"     && <TabUsers />}
       {activeTab === "suppliers" && <TabSuppliers />}
+      {activeTab === "adboxes"   && <TabAdBoxes />}
     </main>
   );
 }
