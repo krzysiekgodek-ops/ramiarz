@@ -17,12 +17,14 @@ router = APIRouter()
 # ─── Użytkownicy ─────────────────────────────────────────────────────────────
 
 class AdminUserOut(BaseModel):
-    id:            int
-    email:         str
-    is_superadmin: bool
-    is_paid:       bool
-    trial_expires: Optional[datetime]
-    created_at:    Optional[datetime]
+    id:                   int
+    email:                str
+    is_superadmin:        bool
+    is_paid:              bool
+    trial_expires:        Optional[datetime]
+    created_at:           Optional[datetime]
+    subscription_plan:    Optional[str]      # "monthly" | "yearly" | None
+    subscription_expires: Optional[datetime] # data końca opłaconego okresu
 
     class Config:
         from_attributes = True
@@ -57,8 +59,11 @@ async def get_stats(
 
 
 class PatchUser(BaseModel):
-    is_paid:       Optional[bool] = None
-    is_superadmin: Optional[bool] = None
+    is_paid:              Optional[bool]     = None
+    is_superadmin:        Optional[bool]     = None
+    subscription_plan:    Optional[str]      = None   # "monthly" | "yearly" | "none"
+    subscription_expires: Optional[datetime] = None   # ISO datetime lub None
+    clear_subscription:   Optional[bool]     = None   # True → usuwa plan i datę
 
 
 @router.patch("/users/{user_id}", response_model=AdminUserOut)
@@ -75,6 +80,19 @@ async def patch_user(
         target.is_paid = body.is_paid
     if body.is_superadmin is not None:
         target.is_superadmin = body.is_superadmin
+
+    if body.clear_subscription:
+        target.subscription_plan    = None
+        target.subscription_expires = None
+        target.is_paid              = False
+    elif body.subscription_plan is not None:
+        plan = body.subscription_plan if body.subscription_plan != "none" else None
+        target.subscription_plan = plan
+        if body.subscription_expires is not None:
+            target.subscription_expires = body.subscription_expires
+        if plan is not None:
+            target.is_paid = True
+
     db.commit()
     db.refresh(target)
     return target

@@ -3,7 +3,7 @@ import {
   ShieldCheck, Users, AlertCircle, AlertTriangle,
   RefreshCw, Plus, Trash2, Upload, CheckCircle, Building2,
   Crown, UserCheck, UserX, FileSpreadsheet, Search, ChevronDown, ChevronUp,
-  Mail, Send, X,
+  Mail, Send, X, Calendar,
 } from "lucide-react";
 import api from "../services/api";
 
@@ -29,13 +29,19 @@ function StatCard({ icon: Icon, label, value, accent = false }) {
 }
 
 // ─── Wiersz użytkownika ───────────────────────────────────────────────────────
-function UserRow({ u, selected, onSelect, onTogglePaid, onToggleAdmin }) {
+function UserRow({ u, selected, onSelect, onTogglePaid, onToggleAdmin, onEditSub }) {
   const trial = u.trial_expires
     ? new Date(u.trial_expires).toLocaleDateString("pl-PL")
     : "—";
   const created = u.created_at
     ? new Date(u.created_at).toLocaleDateString("pl-PL")
     : "—";
+  const subExpires = u.subscription_expires
+    ? new Date(u.subscription_expires).toLocaleDateString("pl-PL")
+    : "—";
+  const subLabel = u.subscription_plan === "monthly" ? "Miesięczny"
+                 : u.subscription_plan === "yearly"  ? "Roczny"
+                 : null;
 
   return (
     <tr className="border-b border-stone-200 dark:border-stone-800 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
@@ -70,7 +76,12 @@ function UserRow({ u, selected, onSelect, onTogglePaid, onToggleAdmin }) {
         </button>
       </td>
       <td className="px-4 py-3 text-xs text-center" style={{ color: 'var(--text-dim)' }}>
-        {u.is_paid ? "—" : trial}
+        {u.is_paid ? (
+          <div className="flex flex-col items-center gap-0.5">
+            {subLabel && <span className="text-accent-400 font-medium">{subLabel}</span>}
+            <span>{subExpires}</span>
+          </div>
+        ) : trial}
       </td>
       <td className="px-4 py-3 text-center">
         <button
@@ -82,6 +93,15 @@ function UserRow({ u, selected, onSelect, onTogglePaid, onToggleAdmin }) {
           }`}
         >
           {u.is_superadmin ? "Admin" : "Użytkownik"}
+        </button>
+      </td>
+      <td className="px-3 py-3 text-center">
+        <button
+          onClick={() => onEditSub(u)}
+          className="text-stone-400 hover:text-accent-400 transition-colors p-1 rounded"
+          title="Edytuj subskrypcję"
+        >
+          <Calendar size={14} />
         </button>
       </td>
     </tr>
@@ -253,6 +273,97 @@ function EmailComposeModal({ selectedIds, onClose }) {
   );
 }
 
+// ─── Modal edycji subskrypcji ─────────────────────────────────────────────────
+function SubscriptionModal({ user, onClose, onSaved }) {
+  const [plan,    setPlan]    = useState(user.subscription_plan ?? "");
+  const [expires, setExpires] = useState(
+    user.subscription_expires
+      ? new Date(user.subscription_expires).toISOString().slice(0, 10)
+      : ""
+  );
+  const [saving, setSaving]  = useState(false);
+  const [error,  setError]   = useState(null);
+
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const payload = {};
+      if (plan === "") {
+        payload.clear_subscription = true;
+      } else {
+        payload.subscription_plan = plan;
+        payload.subscription_expires = expires ? new Date(expires + "T23:59:59Z").toISOString() : null;
+        payload.is_paid = true;
+      }
+      const { data } = await api.patch(`/admin/users/${user.id}`, payload);
+      onSaved(data);
+      onClose();
+    } catch (e) {
+      setError(e?.response?.data?.detail ?? "Błąd zapisu.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="glass-card p-6 w-full max-w-sm">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-semibold text-base flex items-center gap-2" style={{ color: "var(--text)" }}>
+            <Calendar size={16} className="text-accent-400" />
+            Subskrypcja
+          </h3>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-300">
+            <X size={18} />
+          </button>
+        </div>
+
+        <p className="text-xs mb-4" style={{ color: "var(--text-dim)" }}>{user.email}</p>
+
+        <label className="label">Plan</label>
+        <select value={plan} onChange={(e) => setPlan(e.target.value)} className="input-field mb-3">
+          <option value="">— brak / Trial —</option>
+          <option value="monthly">Miesięczny (15 zł)</option>
+          <option value="yearly">Roczny (150 zł)</option>
+        </select>
+
+        {plan !== "" && (
+          <>
+            <label className="label">Data końca subskrypcji</label>
+            <input
+              type="date"
+              value={expires}
+              onChange={(e) => setExpires(e.target.value)}
+              className="input-field mb-4"
+            />
+          </>
+        )}
+
+        {error && (
+          <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm mb-3">
+            <AlertCircle size={14} /> <span>{error}</span>
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button onClick={onClose} className="btn-ghost flex-1 text-sm">Anuluj</button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="btn-accent flex-1 flex items-center justify-center gap-2 text-sm"
+          >
+            {saving
+              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <CheckCircle size={14} />}
+            {saving ? "Zapisuję…" : "Zapisz"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Zakładka: Użytkownicy ────────────────────────────────────────────────────
 function TabUsers() {
   const [users,    setUsers]    = useState([]);
@@ -261,6 +372,7 @@ function TabUsers() {
   const [error,    setError]    = useState(null);
   const [selected, setSelected] = useState([]);   // id zaznaczonych użytkowników
   const [showMail, setShowMail] = useState(false);
+  const [subModal, setSubModal] = useState(null); // user object lub null
 
   const toggleSelect = (id) =>
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -304,6 +416,10 @@ function TabUsers() {
     } catch (e) {
       setError(e?.response?.data?.detail ?? "Błąd zmiany roli.");
     }
+  };
+
+  const handleSubSaved = (updated) => {
+    setUsers((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
   };
 
   return (
@@ -355,7 +471,7 @@ function TabUsers() {
                   aria-label="Zaznacz wszystkich"
                 />
               </th>
-              {["Email", "Dołączył", "Status", "Trial do", "Rola"].map((h, i) => (
+              {["Email", "Dołączył", "Status", "Plan / Trial do", "Rola", ""].map((h, i) => (
                 <th key={h} className={`px-4 py-3 text-xs font-medium uppercase tracking-wider ${i === 0 ? "text-left" : "text-center"}`}
                   style={{ color: 'var(--text-dim)' }}>
                   {h}
@@ -367,7 +483,7 @@ function TabUsers() {
             {loading ? (
               [1, 2, 3].map((i) => (
                 <tr key={i} className="border-b border-stone-200 dark:border-stone-800">
-                  {[5, 50, 20, 15, 20, 15].map((w, j) => (
+                  {[5, 50, 20, 15, 20, 15, 5].map((w, j) => (
                     <td key={j} className="px-4 py-3">
                       <div className="h-4 rounded bg-stone-200 dark:bg-stone-800 animate-pulse" style={{ width: `${w}%` }} />
                     </td>
@@ -383,11 +499,12 @@ function TabUsers() {
                   onSelect={toggleSelect}
                   onTogglePaid={togglePaid}
                   onToggleAdmin={toggleAdmin}
+                  onEditSub={(u) => setSubModal(u)}
                 />
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-dim)' }}>
+                <td colSpan={7} className="px-4 py-10 text-center text-sm" style={{ color: 'var(--text-dim)' }}>
                   Brak użytkowników.
                 </td>
               </tr>
@@ -400,6 +517,14 @@ function TabUsers() {
         <EmailComposeModal
           selectedIds={selected}
           onClose={() => setShowMail(false)}
+        />
+      )}
+
+      {subModal && (
+        <SubscriptionModal
+          user={subModal}
+          onClose={() => setSubModal(null)}
+          onSaved={handleSubSaved}
         />
       )}
     </div>
