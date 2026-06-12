@@ -19,6 +19,8 @@ async def get_me(user: User = Depends(get_current_user), db: Session = Depends(g
         "is_superadmin": user.is_superadmin,
         "is_paid":       user.is_paid,
         "trial_expires": user.trial_expires,
+        "subscription_plan":    user.subscription_plan,
+        "subscription_expires": user.subscription_expires,
         "settings": {
             "company_name": settings.company_name if settings else "Mój Warsztat",
             "address":      settings.address      if settings else "",

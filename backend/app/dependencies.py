@@ -158,12 +158,48 @@ async def get_current_user(
     return user
 
 
-async def get_active_user(user: User = Depends(get_current_user)) -> User:
+def _is_pro(user: User) -> bool:
+    """True gdy user ma aktywną płatną subskrypcję (nie trial)."""
     from datetime import datetime, timezone
-    if user.is_superadmin or user.is_paid:
+    if user.is_superadmin:
+        return True
+    if not user.is_paid:
+        return False
+    # Ręcznie nadany dostęp przez admina (bez daty końca)
+    if user.subscription_expires is None:
+        return True
+    # Aktywna subskrypcja — data końca w przyszłości
+    exp = user.subscription_expires
+    if exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    return exp > datetime.now(timezone.utc)
+
+
+async def get_active_user(user: User = Depends(get_current_user)) -> User:
+    """Wpuszcza: superadmin, płatny PRO, user w aktywnym trialu."""
+    from datetime import datetime, timezone
+    if user.is_superadmin or _is_pro(user):
         return user
-    if user.trial_expires.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
-        raise HTTPException(status_code=402, detail="Trial wygasł — wymagana subskrypcja")
+    # Sprawdź trial
+    trial = user.trial_expires
+    if trial is not None:
+        if trial.tzinfo is None:
+            trial = trial.replace(tzinfo=timezone.utc)
+        if trial > datetime.now(timezone.utc):
+            return user
+    raise HTTPException(
+        status_code=402,
+        detail="Trial wygasł — wymagana subskrypcja"
+    )
+
+
+async def get_pro_user(user: User = Depends(get_current_user)) -> User:
+    """Wymaga aktywnej płatnej subskrypcji (nie wystarcza sam trial)."""
+    if not _is_pro(user):
+        raise HTTPException(
+            status_code=402,
+            detail="Ta funkcja wymaga planu PRO — wykup subskrypcję"
+        )
     return user
 
 

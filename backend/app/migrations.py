@@ -37,7 +37,7 @@ def run_migrations():
                 conn.execute(text("ALTER TABLE users ADD COLUMN subscription_plan TEXT"))
                 conn.commit()
             if "subscription_expires" not in cols:
-                conn.execute(text("ALTER TABLE users ADD COLUMN subscription_expires TIMESTAMP"))
+                conn.execute(text("ALTER TABLE users ADD COLUMN subscription_expires DATETIME"))
                 conn.commit()
 
     if inspector.has_table("mouldings"):

@@ -57,6 +57,15 @@ async def create_order(
     user: User = Depends(get_active_user),
     db:   Session = Depends(get_db)
 ):
+    # Limit 3 zleceń dla użytkowników na trialu
+    from app.dependencies import _is_pro
+    if not _is_pro(user):
+        count = db.query(Order).filter_by(user_id=user.id).count()
+        if count >= 3:
+            raise HTTPException(
+                status_code=402,
+                detail="Osiągnięto limit 3 zleceń w planie Trial. Wykup subskrypcję PRO."
+            )
     order = Order(user_id=user.id, **body.dict())
     db.add(order)
     db.commit()

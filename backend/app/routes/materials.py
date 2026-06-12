@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List
-from app.dependencies import get_active_user
+from app.dependencies import get_active_user, get_pro_user
 from app.models.models import User, AdditionalMaterial
 from app.database import get_db
 
@@ -60,7 +60,7 @@ async def list_materials(
 @router.post("", response_model=MaterialOut, status_code=201)
 async def create_material(
     body: MaterialCreate,
-    user: User = Depends(get_active_user),
+    user: User = Depends(get_pro_user),
     db:   Session = Depends(get_db)
 ):
     _validate_category(body.category)
@@ -115,7 +115,7 @@ async def update_material(
 @router.delete("/{mat_id}", status_code=204)
 async def delete_material(
     mat_id: int,
-    user: User = Depends(get_active_user),
+    user: User = Depends(get_pro_user),
     db:   Session = Depends(get_db)
 ):
     mat = db.query(AdditionalMaterial).filter_by(id=mat_id, user_id=user.id).first()
