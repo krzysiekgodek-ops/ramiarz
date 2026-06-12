@@ -30,6 +30,16 @@ def run_migrations():
             ))
             conn.commit()
 
+    if inspector.has_table("users"):
+        cols = {col["name"] for col in inspector.get_columns("users")}
+        with engine.connect() as conn:
+            if "subscription_plan" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN subscription_plan TEXT"))
+                conn.commit()
+            if "subscription_expires" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN subscription_expires TIMESTAMP"))
+                conn.commit()
+
     if inspector.has_table("mouldings"):
         cols = {col["name"] for col in inspector.get_columns("mouldings")}
         with engine.connect() as conn:

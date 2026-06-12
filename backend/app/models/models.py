@@ -18,7 +18,9 @@ class User(Base):
     created_at = Column(DateTime, default=get_utc_now)
     trial_expires = Column(DateTime, default=lambda: get_utc_now() + timedelta(days=21))
     is_paid = Column(Boolean, default=False)
-    
+    subscription_plan    = Column(String, nullable=True)   # "monthly" | "yearly" | None
+    subscription_expires = Column(DateTime, nullable=True) # data końca opłaconego okresu
+
     # Relacje - [Audyt: 1] czytelna struktura
     settings = relationship("WorkshopSettings", back_populates="owner", uselist=False, cascade="all, delete-orphan")
     configs = relationship("UserSupplierConfig", back_populates="user", cascade="all, delete-orphan")
