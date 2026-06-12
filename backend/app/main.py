@@ -36,6 +36,18 @@ app.include_router(help.router,       prefix="/api/help",       tags=["help"])
 from app.routes.adboxes import router as adboxes_router
 app.include_router(adboxes_router, prefix="/api/adboxes", tags=["adboxes"])
 
+# Router Stripe jest OPCJONALNY — brak pakietu `stripe` lub błąd jego konfiguracji
+# nie może zablokować startu całej aplikacji (auth, zlecenia, ustawienia, /auth/me).
+# Jeśli się nie załaduje, płatności są niedostępne, ale reszta API działa normalnie.
+try:
+    from app.routes.stripe_routes import router as stripe_router
+    app.include_router(stripe_router, prefix="/api/stripe", tags=["stripe"])
+except Exception as _stripe_err:  # noqa: BLE001
+    import logging
+    logging.getLogger(__name__).error(
+        f"Router Stripe nie został załadowany — płatności niedostępne: {_stripe_err}"
+    )
+
 from app.services.subscription_notifier import run_notifier
 
 @app.get("/api/cron/notify-expiring", include_in_schema=False)

@@ -185,6 +185,36 @@ export default function SettingsPage() {
   const [newItem,    setNewItem]    = useState({});   // pole "dodaj pozycję" per kategoria
   const [addingItem, setAddingItem] = useState(null); // kategoria w trakcie dodawania
 
+  // Stripe Checkout
+  const [checkoutLoading, setCheckoutLoading] = useState(null); // "monthly" | "yearly" | null
+  const [checkoutError,   setCheckoutError]   = useState(null);
+
+  const handleCheckout = async (plan) => {
+    setCheckoutLoading(plan);
+    setCheckoutError(null);
+    try {
+      const { data } = await api.post("/stripe/create-checkout", { plan });
+      window.location.href = data.url;
+    } catch (e) {
+      setCheckoutError(e?.response?.data?.detail ?? "Błąd połączenia ze Stripe. Spróbuj ponownie.");
+      setCheckoutLoading(null);
+    }
+  };
+
+  // Obsługa powrotu ze Stripe
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const stripeResult = params.get("stripe");
+    if (stripeResult === "success") {
+      // Odśwież dane użytkownika żeby zaktualizować status PRO
+      window.history.replaceState({}, "", "/settings");
+      window.location.reload();
+    }
+    if (stripeResult === "cancel") {
+      window.history.replaceState({}, "", "/settings");
+    }
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -481,13 +511,30 @@ export default function SettingsPage() {
                   dodawać własnych materiałów. Plan PRO usuwa wszystkie ograniczenia.
                 </p>
                 <div className="flex gap-2">
-                  <button className="flex-1 btn-accent text-xs py-2">
-                    Kup miesięczny
+                  <button
+                    onClick={() => handleCheckout("monthly")}
+                    disabled={checkoutLoading === "monthly"}
+                    className="flex-1 btn-accent text-xs py-2 flex items-center justify-center gap-1.5"
+                  >
+                    {checkoutLoading === "monthly"
+                      ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      : null}
+                    {checkoutLoading === "monthly" ? "Przekierowuję…" : "Kup miesięczny — 15 zł/mies."}
                   </button>
-                  <button className="flex-1 btn-accent text-xs py-2 opacity-80">
-                    Kup roczny (taniej)
+                  <button
+                    onClick={() => handleCheckout("yearly")}
+                    disabled={checkoutLoading === "yearly"}
+                    className="flex-1 btn-accent text-xs py-2 flex items-center justify-center gap-1.5 opacity-90"
+                  >
+                    {checkoutLoading === "yearly"
+                      ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      : null}
+                    {checkoutLoading === "yearly" ? "Przekierowuję…" : "Kup roczny — 150 zł/rok"}
                   </button>
                 </div>
+                {checkoutError && (
+                  <p className="text-xs text-red-500 mt-2">{checkoutError}</p>
+                )}
               </div>
             )}
             {isPro && (
