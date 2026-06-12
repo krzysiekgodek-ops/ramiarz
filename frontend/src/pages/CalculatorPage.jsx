@@ -7,6 +7,7 @@ import {
 import { Link, useLocation } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { useSubscription } from "../hooks/useSubscription";
 import { useCalculator } from "../hooks/useCalculator";
 
 // ─── Pole numeryczne ─────────────────────────────────────────────────────────
@@ -438,9 +439,13 @@ function SaveModal({ total, onClose, onSaved, initialDetails = "", shop }) {
 // ─── Główna strona ───────────────────────────────────────────────────────────
 export default function CalculatorPage() {
   const { dbUser } = useAuth();
+  const { isPro, isOnTrial } = useSubscription();
   const shop = dbUser?.settings ?? null;
   const location = useLocation();
   const { params, updateParam, result, loading, error, calculate, reset } = useCalculator();
+
+  const [orderCount, setOrderCount] = useState(0);
+  const orderLimitReached = !isPro && isOnTrial && orderCount >= 3;
 
   const [mouldingsRaw,            setMouldingsRaw]            = useState([]);
   const [matsRaw,                 setMatsRaw]                 = useState([]);
@@ -466,6 +471,13 @@ export default function CalculatorPage() {
       setSavedOk(false);
     }
   }, [location.state?.newQuote, reset]);
+
+  // Liczba zapisanych zleceń — do limitu 3 w planie Trial
+  useEffect(() => {
+    api.get("/orders")
+      .then(({ data }) => setOrderCount(Array.isArray(data) ? data.length : 0))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -536,6 +548,7 @@ export default function CalculatorPage() {
 
   const handleSaved = () => {
     setSavedOk(true);
+    setOrderCount((c) => c + 1);
     setTimeout(() => setSavedOk(false), 4000);
   };
 
@@ -982,13 +995,21 @@ export default function CalculatorPage() {
                       Zlecenie zapisane
                     </div>
                   ) : (
-                    <button
-                      onClick={() => setSaveModalOpen(true)}
-                      className="btn-accent w-full flex items-center justify-center gap-2 text-sm"
-                    >
-                      <Save size={15} />
-                      Zapisz zlecenie
-                    </button>
+                    <>
+                      <button
+                        onClick={() => setSaveModalOpen(true)}
+                        disabled={orderLimitReached}
+                        className={`btn-accent w-full flex items-center justify-center gap-2 text-sm ${orderLimitReached ? "opacity-50 cursor-not-allowed" : ""}`}
+                      >
+                        <Save size={15} />
+                        Zapisz zlecenie
+                      </button>
+                      {orderLimitReached && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 text-center">
+                          Limit 3 zleceń w planie Trial
+                        </p>
+                      )}
+                    </>
                   )}
                   <div className="flex gap-2">
                     {notes.trim() ? (

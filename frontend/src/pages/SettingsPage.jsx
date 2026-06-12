@@ -3,6 +3,8 @@ import { Settings, Save, AlertCircle, CheckCircle, User, Building, Building2, Sh
 import { Link } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../hooks/useAuth";
+import { useSubscription } from "../hooks/useSubscription";
+import SubscriptionGate from "../components/SubscriptionGate";
 
 const MATERIAL_CATALOG = {
   front: {
@@ -155,6 +157,7 @@ function MaterialRow({ name, unit, showMargin, draft, onChange, onSave, saving, 
 
 export default function SettingsPage() {
   const { dbUser } = useAuth();
+  const { isPro, isOnTrial, trialDaysLeft, planLabel } = useSubscription();
 
   const [form, setForm] = useState({
     company_name: "",
@@ -463,6 +466,40 @@ export default function SettingsPage() {
             </Link>
           </div>
         )}
+
+        {/* Sekcja abonamentu */}
+        {!dbUser?.is_superadmin && (
+          <div className="mt-4 pt-4 border-t border-stone-200 dark:border-stone-800">
+            {isOnTrial && (
+              <div className="rounded-xl bg-amber-50 dark:bg-amber-900/20
+                              border border-amber-200 dark:border-amber-800/40 p-4 mb-3">
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">
+                  Trial — pozostało {trialDaysLeft} {trialDaysLeft === 1 ? "dzień" : "dni"}
+                </p>
+                <p className="text-xs text-amber-600 dark:text-amber-500 mb-3">
+                  W planie Trial możesz zapisać maks. 3 zlecenia i nie możesz
+                  dodawać własnych materiałów. Plan PRO usuwa wszystkie ograniczenia.
+                </p>
+                <div className="flex gap-2">
+                  <button className="flex-1 btn-accent text-xs py-2">
+                    Kup miesięczny
+                  </button>
+                  <button className="flex-1 btn-accent text-xs py-2 opacity-80">
+                    Kup roczny (taniej)
+                  </button>
+                </div>
+              </div>
+            )}
+            {isPro && (
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm" style={{ color: "var(--text-dim)" }}>Plan</span>
+                <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                  {planLabel ?? "PRO"} ✓
+                </span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Dane warsztatu */}
@@ -655,26 +692,28 @@ export default function SettingsPage() {
             </div>
 
             {/* Dodaj własną pozycję */}
-            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-stone-100 dark:border-stone-800/60">
-              <input
-                type="text"
-                value={newItem[category] ?? ""}
-                onChange={(e) => setNewItem((prev) => ({ ...prev, [category]: e.target.value }))}
-                onKeyDown={(e) => e.key === "Enter" && addCustomItem(category)}
-                placeholder="Dodaj własną pozycję, np. oklejanie papierem…"
-                className="input-field flex-1 text-sm"
-              />
-              <button
-                onClick={() => addCustomItem(category)}
-                disabled={addingItem === category || !(newItem[category] ?? "").trim()}
-                className="btn-accent text-xs flex items-center gap-1.5 px-3 py-2 shrink-0"
-              >
-                {addingItem === category
-                  ? <span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                  : <Plus size={13} />}
-                Dodaj
-              </button>
-            </div>
+            <SubscriptionGate>
+              <div className="flex items-center gap-2 mt-3 pt-3 border-t border-stone-100 dark:border-stone-800/60">
+                <input
+                  type="text"
+                  value={newItem[category] ?? ""}
+                  onChange={(e) => setNewItem((prev) => ({ ...prev, [category]: e.target.value }))}
+                  onKeyDown={(e) => e.key === "Enter" && addCustomItem(category)}
+                  placeholder="Dodaj własną pozycję, np. oklejanie papierem…"
+                  className="input-field flex-1 text-sm"
+                />
+                <button
+                  onClick={() => addCustomItem(category)}
+                  disabled={addingItem === category || !(newItem[category] ?? "").trim()}
+                  className="btn-accent text-xs flex items-center gap-1.5 px-3 py-2 shrink-0"
+                >
+                  {addingItem === category
+                    ? <span className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
+                    : <Plus size={13} />}
+                  Dodaj
+                </button>
+              </div>
+            </SubscriptionGate>
           </div>
         );
       })}
