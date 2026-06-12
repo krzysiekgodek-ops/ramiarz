@@ -472,7 +472,7 @@ function TabUsers() {
                 />
               </th>
               {["Email", "Dołączył", "Status", "Plan / Trial do", "Rola", ""].map((h, i) => (
-                <th key={h} className={`px-4 py-3 text-xs font-medium uppercase tracking-wider ${i === 0 ? "text-left" : "text-center"}`}
+                <th key={i} className={`px-4 py-3 text-xs font-medium uppercase tracking-wider ${i === 0 ? "text-left" : "text-center"}`}
                   style={{ color: 'var(--text-dim)' }}>
                   {h}
                 </th>
